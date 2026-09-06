@@ -1,0 +1,14 @@
+[32mInstalling dependencies from lock file (including require-dev)[39m
+[32mVerifying lock file contents can be installed on current platform.[39m
+Nothing to install, update or remove
+[32mGenerating optimized autoload files[39m
+> Illuminate\Foundation\ComposerScripts::postAutoloadDump
+> @php artisan package:discover --ansi
+
+[33mIn Filesystem.php line 233:[39m
+[37;41m                                                                                                                       [39;49m
+[37;41m  rename(C:\Users\EIKON\Documents\APP\Invoice\invoice-management\bootstrap\cache\pacA921.tmp,C:\Users\EIKON\Documents  [39;49m
+[37;41m  \APP\Invoice\invoice-management\bootstrap\cache/packages.php): Access is denied (code: 5)                            [39;49m
+[37;41m                                                                                                                       [39;49m
+
+[37;41mScript @php artisan package:discover --ansi handling the post-autoload-dump event returned with error code 1[39;49m

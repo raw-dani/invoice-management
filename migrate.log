@@ -1,0 +1,5 @@
+
+  [30;43m WARN [39;49m The database 'invoice_management' does not exist on the 'mysql' connection.  
+
+[32m  [39m[39;1mWould you like to create it?[39;22m (yes/no) [[33mno[39m]
+[1m❯ [22m

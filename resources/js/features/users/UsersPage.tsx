@@ -1,0 +1,17 @@
+import { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { usersApi, UserInput } from '../../api/users';
+import { Card, CardBody, CardHeader, PageHeader } from '../../components/ui/Display';
+import { Input, Select } from '../../components/ui/Form';
+import Button from '../../components/ui/Button';
+import { ConfirmDialog } from '../../components/ui/Modal';
+
+export default function UsersPage() {
+    const qc = useQueryClient(); const { data: users, isLoading } = useQuery({ queryKey: ['users'], queryFn: usersApi.list });
+    const [editing, setEditing] = useState<number | null>(null); const [deleteId, setDeleteId] = useState<number | null>(null);
+    const [form, setForm] = useState<UserInput>({ name: '', email: '', password: '', password_confirmation: '', role: 'staff' });
+    const save = useMutation({ mutationFn: () => editing ? usersApi.update(editing, form) : usersApi.create(form), onSuccess: () => { qc.invalidateQueries({ queryKey: ['users'] }); setEditing(null); setForm({ name: '', email: '', password: '', password_confirmation: '', role: 'staff' }); } });
+    const remove = useMutation({ mutationFn: usersApi.remove, onSuccess: () => qc.invalidateQueries({ queryKey: ['users'] }) });
+    const field = (key: keyof UserInput, value: string) => setForm({ ...form, [key]: value });
+    return <><PageHeader title="Users" subtitle="Manage company users and roles." /><div className="grid grid-cols-1 lg:grid-cols-3 gap-6"><Card><CardHeader><h3 className="font-medium">{editing ? 'Edit User' : 'Add User'}</h3></CardHeader><CardBody className="space-y-3"><Input placeholder="Name" value={form.name} onChange={(e) => field('name', e.target.value)} /><Input placeholder="Email" type="email" value={form.email} onChange={(e) => field('email', e.target.value)} /><Select value={form.role} onChange={(e) => field('role', e.target.value)}><option value="admin">Admin</option><option value="staff">Staff</option><option value="viewer">Viewer</option></Select>{!editing && <><Input placeholder="Password" type="password" value={form.password} onChange={(e) => field('password', e.target.value)} /><Input placeholder="Confirm password" type="password" value={form.password_confirmation} onChange={(e) => field('password_confirmation', e.target.value)} /></>}<div className="flex gap-2"><Button loading={save.isPending} onClick={() => save.mutate()}>{editing ? 'Update' : 'Add User'}</Button>{editing && <Button variant="secondary" onClick={() => setEditing(null)}>Cancel</Button>}</div></CardBody></Card><Card className="lg:col-span-2"><CardHeader><h3 className="font-medium">Company Users</h3></CardHeader><CardBody>{isLoading ? <div>Loading...</div> : <div className="divide-y">{users?.map((user) => <div key={user.id} className="py-3 flex items-center justify-between"><div><div className="font-medium text-sm">{user.name}</div><div className="text-xs text-gray-500">{user.email} · {user.role}</div></div><div className="flex gap-2"><Button size="sm" variant="secondary" onClick={() => { setEditing(user.id); setForm({ name: user.name, email: user.email, role: user.role as UserInput['role'] }); }}>Edit</Button><Button size="sm" variant="danger" onClick={() => setDeleteId(user.id)}>Delete</Button></div></div>)}</div>}</CardBody></Card></div><ConfirmDialog open={!!deleteId} title="Delete user?" message="This action cannot be undone." danger onCancel={() => setDeleteId(null)} onConfirm={async () => { if (deleteId) await remove.mutateAsync(deleteId); setDeleteId(null); }} /></>;
+}

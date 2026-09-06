@@ -1,0 +1,114 @@
+<x-app-layout :pageTitle="'Create Quote'">
+    <div class="max-w-4xl mx-auto">
+        <div class="mb-6"><a href="{{ route('quotes.index') }}" class="text-blue-600">← Back to Quotes</a></div>
+        <form action="{{ route('quotes.store') }}" method="POST" id="quoteForm">
+            @csrf
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <h2 class="text-lg font-bold mb-4">Quote Details</h2>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Customer *</label>
+                        <select name="customer_id" required class="w-full border rounded-lg px-4 py-2">
+                            <option value="">Select</option>
+                            @foreach($customers as $c)
+                                <option value="{{ $c->id }}" {{ (old('customer_id', $selectedCustomer?->id) == $c->id) ? 'selected' : '' }}>{{ $c->company_name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Currency</label>
+                        <select name="currency" class="w-full border rounded-lg px-4 py-2"><option value="IDR">IDR</option><option value="USD">USD</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Quote Date *</label>
+                        <input type="date" name="quote_date" value="{{ old('quote_date', date('Y-m-d')) }}" required class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Valid Until</label>
+                        <input type="date" name="valid_until" value="{{ old('valid_until', date('Y-m-d', strtotime('+30 days'))) }}" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                </div>
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="text-lg font-bold">Items</h2>
+                    <button type="button" onclick="addItem()" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm">+ Add Item</button>
+                </div>
+                <table class="w-full" id="itemsTable">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-sm">Product</th>
+                            <th class="px-4 py-2 text-left text-sm">Description</th>
+                            <th class="px-4 py-2 text-left text-sm w-20">Qty</th>
+                            <th class="px-4 py-2 text-left text-sm w-32">Price</th>
+                            <th class="px-4 py-2 text-left text-sm w-28">Tax %</th>
+                            <th class="w-10"></th>
+                        </tr>
+                    </thead>
+                    <tbody id="itemsBody"></tbody>
+                </table>
+            </div>
+
+            <div class="bg-white rounded-lg shadow-sm p-6 mb-6">
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Notes</label>
+                        <textarea name="notes" rows="2" class="w-full border rounded-lg px-4 py-2"></textarea>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Terms</label>
+                        <textarea name="terms" rows="2" class="w-full border rounded-lg px-4 py-2"></textarea>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4 mt-4">
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Discount</label>
+                        <input type="number" name="discount" value="0" min="0" step="0.01" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Discount Type</label>
+                        <select name="discount_type" class="w-full border rounded-lg px-4 py-2"><option value="0">Fixed</option><option value="1">Percentage</option></select>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium mb-1">Tax Rate (%)</label>
+                        <input type="number" name="tax_rate" value="0" min="0" max="100" step="0.01" class="w-full border rounded-lg px-4 py-2">
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end">
+                <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg">Create Quote</button>
+            </div>
+        </form>
+    </div>
+
+    <script>
+        let idx = 0;
+        const products = @json($products);
+        function addItem() {
+            const tbody = document.getElementById('itemsBody');
+            const row = document.createElement('tr');
+            row.className = 'border-b';
+            row.innerHTML = `
+                <td class="px-4 py-2"><select name="items[${idx}][product_id]" class="w-full border rounded px-2 py-1" onchange="fillProduct(this)"><option value="">Select</option>${products.map(p => `<option value="${p.id}" data-price="${p.price}" data-name="${p.name}" data-tax="${p.tax_rate}">${p.name}</option>`).join('')}</select></td>
+                <td class="px-4 py-2"><input type="text" name="items[${idx}][description]" class="w-full border rounded px-2 py-1" required></td>
+                <td class="px-4 py-2"><input type="number" name="items[${idx}][quantity]" value="1" min="0.01" step="0.01" class="w-full border rounded px-2 py-1"></td>
+                <td class="px-4 py-2"><input type="number" name="items[${idx}][unit_price]" value="0" min="0" step="0.01" class="w-full border rounded px-2 py-1"></td>
+                <td class="px-4 py-2"><input type="number" name="items[${idx}][tax_rate]" value="0" min="0" max="100" step="0.01" class="w-full border rounded px-2 py-1"></td>
+                <td class="px-4 py-2"><button type="button" onclick="this.closest('tr').remove()" class="text-red-600">✕</button></td>
+            `;
+            tbody.appendChild(row);
+            idx++;
+        }
+        function fillProduct(sel) {
+            const opt = sel.options[sel.selectedIndex];
+            const row = sel.closest('tr');
+            if (opt.value) {
+                row.querySelector('input[name*="[description]"]').value = opt.dataset.name;
+                row.querySelector('input[name*="[unit_price]"]').value = opt.dataset.price;
+                row.querySelector('input[name*="[tax_rate]"]').value = opt.dataset.tax;
+            }
+        }
+        addItem();
+    </script>
+</x-app-layout>
+            </div>

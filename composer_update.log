@@ -1,0 +1,11 @@
+[32mLoading composer repositories with package information[39m
+[32mUpdating dependencies[39m
+[37;41mYour requirements could not be resolved to an installable set of packages.[39;49m
+
+  Problem 1
+    - Root composer.json requires php ^8.2 but your php version (8.1.31) does not satisfy that requirement.
+  Problem 2
+    - Root composer.json requires laravel/framework ^11.31 -> satisfiable by laravel/framework[v11.31.0, ..., v11.56.1].
+    - laravel/framework[v11.31.0, ..., v11.56.1] require php ^8.2 -> your php version (8.1.31) does not satisfy that requirement.
+
+Use the option --with-all-dependencies (-W) to allow upgrades, downgrades and removals for packages currently locked to specific versions.
