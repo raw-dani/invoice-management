@@ -33,12 +33,39 @@ class TemplateController extends Controller
 
     private function templates(string $model): array
     {
-        return $model::where('company_id', auth()->user()->company_id)
-            ->orWhereNull('company_id')
-            ->orderByDesc('is_default')
-            ->orderBy('name')
-            ->get()
-            ->toArray();
+        $companyId = auth()->user()->company_id;
+        $companyTemplates = $model::where('company_id', $companyId)
+            ->where(function ($q) {
+                $q->where('is_active', true)->orWhere('is_default', true);
+            })
+            ->get();
+        $activeSlug = $companyTemplates->firstWhere('is_default', true)?->slug;
+
+        $templates = $companyTemplates->map(fn ($template) => $template->toArray())->toArray();
+
+        $globalTemplates = $model::whereNull('company_id')->get();
+        foreach ($globalTemplates as $template) {
+            if ($activeSlug && $template->slug === $activeSlug) {
+                continue;
+            }
+            $templates[] = (array) [
+                'id' => $template->id,
+                'name' => $template->name,
+                'slug' => $template->slug,
+                'company_id' => null,
+                'is_active' => $activeSlug ? false : $template->is_active,
+                'is_default' => $activeSlug ? false : $template->is_default,
+            ];
+        }
+
+        usort($templates, function ($a, $b) {
+            if ($a['is_default'] !== $b['is_default']) {
+                return $b['is_default'] <=> $a['is_default'];
+            }
+            return $a['name'] <=> $b['name'];
+        });
+
+        return array_values($templates);
     }
 
     private function activate(Request $request, Model $template, string $model): JsonResponse
@@ -47,7 +74,9 @@ class TemplateController extends Controller
 
         $companyId = auth()->user()->company_id;
         $slug = $template->slug;
-        $model::where('company_id', $companyId)->update(['is_default' => false]);
+        
+        $model::where('company_id', $companyId)->where('slug', '!=', $slug)->delete();
+            
         $selected = $model::updateOrCreate(
             ['company_id' => $companyId, 'slug' => $slug],
             ['name' => $template->name, 'is_active' => true, 'is_default' => true]

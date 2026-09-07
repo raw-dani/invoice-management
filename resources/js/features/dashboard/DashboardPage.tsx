@@ -1,27 +1,32 @@
 import { useQuery } from '@tanstack/react-query';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { dashboardApi } from '../../api/dashboard';
 import { formatMoney, formatDate } from '../../lib/utils';
-import { StatusBadge, Card, PageHeader } from '../../components/ui/Display';
+import { StatusBadge, Card, CardBody, PageHeader } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
+import { Input } from '../../components/ui/Form';
 
 export default function DashboardPage() {
+    const [filters, setFilters] = useState({ from: '', to: '' });
     const { data: summary } = useQuery({
-        queryKey: ['dashboard', 'summary'],
-        queryFn: dashboardApi.summary,
+        queryKey: ['dashboard', 'summary', filters],
+        queryFn: () => dashboardApi.summary(filters),
     });
     const { data: recentInvoices } = useQuery({
-        queryKey: ['dashboard', 'recent-invoices'],
-        queryFn: dashboardApi.recentInvoices,
+        queryKey: ['dashboard', 'recent-invoices', filters],
+        queryFn: () => dashboardApi.recentInvoices(filters),
     });
     const { data: overdueInvoices } = useQuery({
-        queryKey: ['dashboard', 'overdue-invoices'],
-        queryFn: dashboardApi.overdueInvoices,
+        queryKey: ['dashboard', 'overdue-invoices', filters],
+        queryFn: () => dashboardApi.overdueInvoices(filters),
     });
     const { data: upcomingBilling } = useQuery({
-        queryKey: ['dashboard', 'upcoming-billing'],
-        queryFn: dashboardApi.upcomingBilling,
+        queryKey: ['dashboard', 'upcoming-billing', filters],
+        queryFn: () => dashboardApi.upcomingBilling(filters),
     });
+
+    const updateDate = (key: 'from' | 'to', value: string) => setFilters((prev) => ({ ...prev, [key]: value }));
 
     return (
         <>
@@ -35,6 +40,18 @@ export default function DashboardPage() {
                     </>
                 }
             />
+            <Card className="mb-6">
+                <CardBody className="flex flex-wrap gap-3 items-end">
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">From</label>
+                        <Input type="date" value={filters.from} onChange={(e) => updateDate('from', e.target.value)} />
+                    </div>
+                    <div>
+                        <label className="block text-xs text-gray-500 mb-1">To</label>
+                        <Input type="date" value={filters.to} onChange={(e) => updateDate('to', e.target.value)} />
+                    </div>
+                </CardBody>
+            </Card>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <StatCard label="Total Revenue" value={formatMoney(summary?.total_revenue ?? 0)} accent="text-green-600" />

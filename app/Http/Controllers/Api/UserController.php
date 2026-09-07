@@ -3,6 +3,9 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\StoreUserRequest;
+use App\Http\Requests\UpdateUserRequest;
+use App\Models\ActivityLog;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -15,43 +18,54 @@ class UserController extends Controller
         return response()->json(['data' => User::where('company_id', auth()->user()->company_id)->latest()->get(['id', 'name', 'email', 'role', 'created_at'])]);
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreUserRequest $request): JsonResponse
     {
-        $data = $request->validate(['name' => 'required|string|max:255', 'email' => 'required|email|unique:users,email', 'password' => 'required|string|min:8|confirmed', 'role' => 'required|in:admin,staff,viewer']);
-        $user = User::create([...$data, 'password' => Hash::make($data['password']), 'company_id' => auth()->user()->company_id]);
+        $data = $request->validated();
+        $user = User::create([
+            ...$data,
+            'password' => Hash::make($data['password']),
+            'company_id' => auth()->user()->company_id,
+        ]);
+
+        ActivityLog::record('user.created', "User {$user->name} created", $user);
 
         return response()->json(['data' => $user->only(['id', 'name', 'email', 'role', 'created_at'])], 201);
     }
 
-    public function update(Request $request, User $user): JsonResponse
+    public function update(UpdateUserRequest $request, User $user): JsonResponse
     {
-        $this->authorizeUser($user);
-        $data = $request->validate(['name' => 'required|string|max:255', 'email' => 'required|email|unique:users,email,' . $user->id, 'role' => 'required|in:admin,staff,viewer']);
+        $this->authorize('manage', $user);
+
+        $data = $request->validated();
         $user->update($data);
+
+        ActivityLog::record('user.updated', "User {$user->name} updated", $user);
 
         return response()->json(['data' => $user->fresh()->only(['id', 'name', 'email', 'role', 'created_at'])]);
     }
 
     public function destroy(User $user): JsonResponse
     {
-        $this->authorizeUser($user);
+        $this->authorize('delete', $user);
+
         abort_if($user->id === auth()->id(), 422, 'You cannot delete your own account.');
         abort_if($user->role === 'owner', 422, 'The company owner cannot be deleted.');
+
         $user->delete();
+
+        ActivityLog::record('user.deleted', "User {$user->name} deleted", $user);
 
         return response()->json(['message' => 'User deleted successfully.']);
     }
 
     public function assignRole(Request $request, User $user): JsonResponse
     {
-        $this->authorizeUser($user);
-        $user->update($request->validate(['role' => 'required|in:admin,staff,viewer']) );
+        $this->authorize('manage', $user);
+
+        $user->update($request->validate(['role' => 'required|in:admin,staff,viewer']));
+
+        ActivityLog::record('user.role_updated', "User {$user->name} role updated to {$user->role}", $user);
 
         return response()->json(['data' => $user->fresh()->only(['id', 'name', 'email', 'role'])]);
-    }
-
-    private function authorizeUser(User $user): void
-    {
-        abort_unless($user->company_id === auth()->user()->company_id, 403);
     }
 }

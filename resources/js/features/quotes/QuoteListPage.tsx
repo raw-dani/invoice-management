@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useQuotes, useDeleteQuote, quoteKeys } from './hooks';
 import { quotesApi, QuoteFilters } from '../../api/quotes';
+import { useCustomers } from '../customers/hooks';
 import { PageHeader, StatusBadge, EmptyState } from '../../components/ui/Display';
 import { DataTable, Pagination } from '../../components/ui/Table';
 import { Input, Select } from '../../components/ui/Form';
 import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { formatMoney, formatDate } from '../../lib/utils';
+import toast from '../../lib/toast';
 import { useSelection } from '../../components/bulk/useSelection';
 import { useBulkDelete, useBulkAction } from '../../components/bulk/useBulk';
 import { BulkBar } from '../../components/bulk/BulkBar';
@@ -21,6 +23,7 @@ export default function QuoteListPage() {
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
     const { data, isLoading } = useQuotes(filters);
+    const { data: customersData } = useCustomers({ per_page: 200 });
     const deleteQuote = useDeleteQuote();
     const selection = useSelection();
     const bulkDelete = useBulkDelete((id) => deleteQuote.mutateAsync(id), [quoteKeys]);
@@ -32,6 +35,7 @@ export default function QuoteListPage() {
     const handleDelete = async () => {
         if (!deleteId) return;
         await deleteQuote.mutateAsync(deleteId);
+        toast.success('Quote deleted successfully.');
         setDeleteId(null);
     };
 
@@ -41,6 +45,7 @@ export default function QuoteListPage() {
         setBulkDeleteOpen(false);
         selection.clear();
         reportBulkDelete(result.total, result.failed);
+        if (result.failed === 0) toast.success(`${result.total} quote(s) deleted.`);
     };
 
     const handleBulkAction = async (action: 'mark_as_expired') => {
@@ -48,6 +53,7 @@ export default function QuoteListPage() {
         const result = await bulkAction.mutateAsync({ ids, action });
         selection.clear();
         reportBulkResult(action.replace(/_/g, ' '), result.data.processed ?? 0, result.data.failed ?? 0);
+        if ((result.data.processed ?? 0) > 0) toast.success(`${result.data.processed} quote(s) updated.`);
     };
 
     return (
@@ -71,6 +77,16 @@ export default function QuoteListPage() {
                     >
                         <option value="">All status</option>
                         {STATUSES.map((s) => <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>)}
+                    </Select>
+                    <Select
+                        className="max-w-[180px]"
+                        defaultValue=""
+                        onChange={(e) => setFilters({ ...filters, customer_id: e.target.value ? Number(e.target.value) : undefined, page: 1 })}
+                    >
+                        <option value="">All customers</option>
+                        {customersData?.data.map((c) => (
+                            <option key={c.id} value={c.id}>{c.company_name}</option>
+                        ))}
                     </Select>
                 </div>
 

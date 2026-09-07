@@ -5,9 +5,11 @@ import {
     useVoidInvoice,
     useDeleteInvoice,
     useDuplicateInvoice,
+    useSendInvoiceEmail,
 } from './hooks';
 import { useDeletePayment } from '../payments/hooks';
-import { Card, CardBody, CardHeader, PageHeader, StatusBadge } from '../../components/ui/Display';
+import { useEntityActivityLogs } from '../activity/hooks';
+import { Card, CardBody, CardHeader, PageHeader, StatusBadge, EmptyState } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { formatMoney, formatDate } from '../../lib/utils';
@@ -15,6 +17,7 @@ import { useState } from 'react';
 import toast from '../../lib/toast';
 import { RecordPaymentForm } from '../payments/RecordPaymentForm';
 import { downloadPdf, openPdfInNewTab, pdfUrls } from '../../lib/pdf';
+import type { ActivityLog } from '../../types';
 
 export default function InvoiceDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -23,6 +26,7 @@ export default function InvoiceDetailPage() {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [paymentOpen, setPaymentOpen] = useState(false);
     const [paymentToDelete, setPaymentToDelete] = useState<number | null>(null);
+    const [showActivity, setShowActivity] = useState(false);
 
     const { data: invoice, isLoading } = useInvoice(Number(id));
     const markSent = useMarkInvoiceSent();
@@ -30,6 +34,8 @@ export default function InvoiceDetailPage() {
     const deleteInvoice = useDeleteInvoice();
     const deletePayment = useDeletePayment();
     const duplicateInvoice = useDuplicateInvoice();
+    const sendEmail = useSendInvoiceEmail();
+    const { data: activityData } = useEntityActivityLogs('Invoice', Number(id));
 
     if (isLoading) return <div>Loading...</div>;
     if (!invoice) return <div>Not found</div>;
@@ -98,6 +104,14 @@ export default function InvoiceDetailPage() {
                                     Mark as Sent
                                 </Button>
                             </>
+                        )}
+                        {!isDraft && !['paid', 'void', 'cancelled'].includes(invoice.status) && (
+                            <Button size="sm" variant="secondary" loading={sendEmail.isPending} onClick={async () => {
+                                await sendEmail.mutateAsync({ id: invoice.id });
+                                toast.success('Invoice email sent');
+                            }}>
+                                Send Email
+                            </Button>
                         )}
                         {!['paid', 'void'].includes(invoice.status) && (
                             <Button size="sm" variant="danger" onClick={() => setConfirmVoid(true)}>
@@ -218,6 +232,37 @@ export default function InvoiceDetailPage() {
                         </CardBody>
                     </Card>
                 )}
+
+                <Card className="lg:col-span-3">
+                    <CardHeader>
+                        <div className="flex justify-between items-center">
+                            <h3 className="font-medium">Activity Log</h3>
+                            <Button size="sm" variant="secondary" onClick={() => setShowActivity(!showActivity)}>
+                                {showActivity ? 'Hide' : 'Show'}
+                            </Button>
+                        </div>
+                    </CardHeader>
+                    {showActivity && (
+                        <CardBody>
+                            {!activityData?.data?.length ? (
+                                <EmptyState title="No activity yet" message="Actions on this invoice will appear here." />
+                            ) : (
+                                <div className="divide-y">
+                                    {activityData.data.map((activity: ActivityLog) => (
+                                        <div key={activity.id} className="py-3 flex gap-4">
+                                            <div className="mt-1 h-2 w-2 rounded-full bg-indigo-500 shrink-0" />
+                                            <div className="min-w-0">
+                                                <div className="text-sm text-gray-900">{activity.description}</div>
+                                                <div className="mt-1 text-xs text-gray-500">{activity.user?.name ?? 'System'} · {formatDate(activity.created_at)}</div>
+                                            </div>
+                                            <div className="ml-auto text-xs text-gray-500 whitespace-nowrap">{activity.action}</div>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </CardBody>
+                    )}
+                </Card>
             </div>
 
             <ConfirmDialog

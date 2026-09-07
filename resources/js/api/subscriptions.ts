@@ -4,6 +4,7 @@ import type { Invoice, Paginated, Subscription } from '../types';
 export interface SubscriptionFilters {
     search?: string;
     status?: string;
+    customer_id?: number;
     page?: number;
     per_page?: number;
 }

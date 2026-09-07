@@ -9,6 +9,7 @@ import { ProductPicker } from '../../components/ProductPicker';
 import { QuickAddCustomer } from '../../components/QuickAddCustomer';
 import { Modal } from '../../components/ui/Modal';
 import { formatMoney, classNames } from '../../lib/utils';
+import toast from '../../lib/toast';
 import type { Product } from '../../types';
 import type { InvoiceInput } from '../../api/invoices';
 
@@ -137,12 +138,18 @@ export default function InvoiceFormPage() {
             })),
         };
 
-        if (!isEdit) {
-            const created = await createMutation.mutateAsync(payload);
-            navigate(`/invoices/${created.id}`);
-        } else if (id) {
-            await updateMutation.mutateAsync({ id: Number(id), data: payload });
-            navigate(`/invoices/${id}`);
+        try {
+            if (!isEdit) {
+                const created = await createMutation.mutateAsync(payload);
+                toast.success('Invoice created successfully.');
+                navigate(`/invoices/${created.id}`);
+            } else if (id) {
+                await updateMutation.mutateAsync({ id: Number(id), data: payload });
+                toast.success('Invoice updated successfully.');
+                navigate(`/invoices/${id}`);
+            }
+        } catch (e) {
+            toast.error('Failed to save invoice.');
         }
     };
 

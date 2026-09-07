@@ -7,4 +7,5 @@ export const usersApi = {
     create: (data: UserInput) => api.post<{ data: ManagedUser }>('/users', data).then((r) => r.data.data),
     update: (id: number, data: UserInput) => api.put<{ data: ManagedUser }>(`/users/${id}`, data).then((r) => r.data.data),
     remove: (id: number) => api.delete(`/users/${id}`),
+    assignRole: (id: number, role: string) => api.post<{ data: ManagedUser }>(`/users/${id}/assign-role`, { role }).then((r) => r.data.data),
 };

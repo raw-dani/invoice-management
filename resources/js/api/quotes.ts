@@ -53,4 +53,6 @@ export const quotesApi = {
         api.post<{ data: Invoice }>(`/quotes/${id}/convert-to-invoice`).then((r) => r.data.data),
     duplicate: (id: number) =>
         api.post<{ data: Quote }>(`/quotes/${id}/duplicate`).then((r) => r.data.data),
+    sendEmail: (id: number, data?: { to?: string; subject?: string; message?: string }) =>
+        api.post<{ success: boolean; message: string }>(`/quotes/${id}/email`, data).then((r) => r.data),
 };

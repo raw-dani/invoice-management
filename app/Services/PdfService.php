@@ -96,8 +96,14 @@ class PdfService
         $slug ??= InvoiceTemplate::whereNull('company_id')
             ->where('is_default', true)
             ->value('slug');
+        $slug ??= 'modern';
 
-        return $slug === 'modern' ? 'pdf.invoice.modern' : 'pdf.invoice.modern';
+        return match ($slug) {
+            'professional' => 'pdf.invoice.professional',
+            'classic' => 'pdf.invoice.classic',
+            'compact' => 'pdf.invoice.compact',
+            default => 'pdf.invoice.modern',
+        };
     }
 
     private function quoteView(int $companyId, ?string $requested): string
@@ -108,7 +114,12 @@ class PdfService
         $slug ??= QuoteTemplate::whereNull('company_id')
             ->where('is_default', true)
             ->value('slug');
+        $slug ??= 'modern';
 
-        return $slug === 'modern' ? 'pdf.quote.modern' : 'pdf.quote.modern';
+        return match ($slug) {
+            'professional' => 'pdf.quote.professional',
+            'corporate' => 'pdf.quote.corporate',
+            default => 'pdf.quote.modern',
+        };
     }
 }

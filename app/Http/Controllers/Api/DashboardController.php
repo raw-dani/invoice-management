@@ -13,15 +13,13 @@ use Illuminate\Http\Request;
 
 class DashboardController extends Controller
 {
-    public function summary(): JsonResponse
+    public function summary(Request $request): JsonResponse
     {
         $companyId = auth()->user()->company_id;
-        $invoices = Invoice::where('company_id', $companyId);
-        $overdue = $this->overdueQuery($companyId);
-        $activeSubscriptions = Subscription::with('items')
-            ->where('company_id', $companyId)
-            ->where('status', 'active')
-            ->get();
+        [$from, $to] = $this->dateRange($request);
+
+        $invoices = Invoice::where('company_id', $companyId)
+            ->whereBetween('invoice_date', [$from, $to]);
 
         return response()->json([
             'data' => [
@@ -31,17 +29,24 @@ class DashboardController extends Controller
                 'outstanding' => (float) (clone $invoices)
                     ->whereIn('status', ['sent', 'partially_paid', 'overdue'])
                     ->sum('balance'),
-                'overdue_count' => $overdue->count(),
-                'customers_count' => Customer::where('company_id', $companyId)->count(),
-                'mrr' => $this->monthlyRecurringRevenue($activeSubscriptions),
+                'overdue_count' => $this->overdueQuery($companyId, $from, $to)->count(),
+                'customers_count' => Customer::where('company_id', $companyId)
+                    ->whereBetween('created_at', [$from, $to])
+                    ->count(),
+                'mrr' => $this->monthlyRecurringRevenue(
+                    Subscription::with('items')->where('company_id', $companyId)->where('status', 'active')->get()
+                ),
             ],
         ]);
     }
 
-    public function recentInvoices(): JsonResponse
+    public function recentInvoices(Request $request): JsonResponse
     {
+        [$from, $to] = $this->dateRange($request);
+
         $invoices = Invoice::with('customer')
             ->where('company_id', auth()->user()->company_id)
+            ->whereBetween('invoice_date', [$from, $to])
             ->latest()
             ->limit(5)
             ->get();
@@ -51,9 +56,11 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function overdueInvoices(): JsonResponse
+    public function overdueInvoices(Request $request): JsonResponse
     {
-        $invoices = $this->overdueQuery(auth()->user()->company_id)
+        [$from, $to] = $this->dateRange($request);
+
+        $invoices = $this->overdueQuery(auth()->user()->company_id, $from, $to)
             ->with('customer')
             ->orderBy('due_date')
             ->limit(10)
@@ -64,12 +71,14 @@ class DashboardController extends Controller
         ]);
     }
 
-    public function upcomingBilling(): JsonResponse
+    public function upcomingBilling(Request $request): JsonResponse
     {
+        [$from, $to] = $this->dateRange($request, 30);
+
         $subscriptions = Subscription::with('customer', 'items')
             ->where('company_id', auth()->user()->company_id)
             ->where('status', 'active')
-            ->whereBetween('next_billing_date', [today(), today()->addDays(30)])
+            ->whereBetween('next_billing_date', [$from, $to])
             ->orderBy('next_billing_date')
             ->limit(10)
             ->get()
@@ -109,11 +118,27 @@ class DashboardController extends Controller
         }), 2);
     }
 
-    private function overdueQuery(int $companyId)
+    private function overdueQuery(int $companyId, ?Carbon $from = null, ?Carbon $to = null)
     {
-        return Invoice::where('company_id', $companyId)
+        $query = Invoice::where('company_id', $companyId)
             ->whereIn('status', ['sent', 'partially_paid', 'overdue'])
             ->whereDate('due_date', '<', now()->toDateString())
             ->where('balance', '>', 0);
+
+        if ($from && $to) {
+            $query->whereBetween('due_date', [$from, $to]);
+        }
+
+        return $query;
+    }
+
+    private function dateRange(Request $request, int $defaultDays = 0): array
+    {
+        $from = $request->filled('from') ? Carbon::parse($request->input('from')) : ($defaultDays ? today()->subDays($defaultDays) : today()->startOfYear());
+        $to = $request->filled('to') ? Carbon::parse($request->input('to')) : today()->endOfDay();
+
+        abort_if($from->gt($to), 422, 'The from date must be before the to date.');
+
+        return [$from, $to];
     }
 }

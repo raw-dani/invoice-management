@@ -28,6 +28,7 @@ import ReportsPage from '../features/reports/ReportsPage';
 import SettingsPage from '../features/settings/SettingsPage';
 import NotificationsPage from '../features/notifications/NotificationsPage';
 import UsersPage from '../features/users/UsersPage';
+import ProfilePage from '../features/profile/ProfilePage';
 
 export const router = createBrowserRouter([
     { path: '/login', element: <LoginPage /> },
@@ -74,6 +75,7 @@ export const router = createBrowserRouter([
                     { path: '/settings', element: <SettingsPage /> },
                     { path: '/notifications', element: <NotificationsPage /> },
                     { path: '/users', element: <UsersPage /> },
+                    { path: '/profile', element: <ProfilePage /> },
                 ],
             },
         ],

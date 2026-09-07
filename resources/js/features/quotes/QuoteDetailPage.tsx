@@ -7,8 +7,10 @@ import {
     useDeleteQuote,
     useConvertQuote,
     useDuplicateQuote,
+    useSendQuoteEmail,
 } from './hooks';
-import { Card, CardBody, CardHeader, PageHeader, StatusBadge } from '../../components/ui/Display';
+import { useEntityActivityLogs } from '../activity/hooks';
+import { Card, CardBody, CardHeader, PageHeader, StatusBadge, EmptyState } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { quotesApi } from '../../api/quotes';
@@ -16,11 +18,13 @@ import { formatMoney, formatDate } from '../../lib/utils';
 import { useState } from 'react';
 import toast from '../../lib/toast';
 import { downloadPdf, openPdfInNewTab, pdfUrls } from '../../lib/pdf';
+import type { ActivityLog } from '../../types';
 
 export default function QuoteDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [showActivity, setShowActivity] = useState(false);
 
     const { data: quote, isLoading } = useQuote(Number(id));
     const sendQuote = useSendQuote();
@@ -29,6 +33,8 @@ export default function QuoteDetailPage() {
     const convertQuote = useConvertQuote();
     const duplicateQuote = useDuplicateQuote();
     const deleteQuote = useDeleteQuote();
+    const sendEmail = useSendQuoteEmail();
+    const { data: activityData } = useEntityActivityLogs('Quote', Number(id));
 
     if (isLoading) return <div>Loading...</div>;
     if (!quote) return <div>Not found</div>;
@@ -122,11 +128,14 @@ export default function QuoteDetailPage() {
                                 navigate(`/invoices/${invoice.id}`);
                             }}>Convert to Invoice</Button>
                         )}
-                        <Button size="sm" variant="secondary" onClick={async () => {
-                            const copy = await duplicateQuote.mutateAsync(quote.id);
-                            toast.success('Quote duplicated');
-                            navigate(`/quotes/${copy.id}`);
-                        }}>Duplicate</Button>
+                        {!['draft'].includes(quote.status) && (
+                            <Button size="sm" variant="secondary" loading={sendEmail.isPending} onClick={async () => {
+                                await sendEmail.mutateAsync({ id: quote.id });
+                                toast.success('Quote email sent');
+                            }}>
+                                Send Email
+                            </Button>
+                        )}
                         <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>Delete</Button>
                     </>
                 }
@@ -185,6 +194,37 @@ export default function QuoteDetailPage() {
                     </Card>
                 )}
             </div>
+
+            <Card className="mt-6">
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <h3 className="font-medium">Activity Log</h3>
+                        <Button size="sm" variant="secondary" onClick={() => setShowActivity(!showActivity)}>
+                            {showActivity ? 'Hide' : 'Show'}
+                        </Button>
+                    </div>
+                </CardHeader>
+                {showActivity && (
+                    <CardBody>
+                        {!activityData?.data?.length ? (
+                            <EmptyState title="No activity yet" message="Actions on this quote will appear here." />
+                        ) : (
+                            <div className="divide-y">
+                                {activityData.data.map((activity: ActivityLog) => (
+                                    <div key={activity.id} className="py-3 flex gap-4">
+                                        <div className="mt-1 h-2 w-2 rounded-full bg-indigo-500 shrink-0" />
+                                        <div className="min-w-0">
+                                            <div className="text-sm text-gray-900">{activity.description}</div>
+                                            <div className="mt-1 text-xs text-gray-500">{activity.user?.name ?? 'System'} · {formatDate(activity.created_at)}</div>
+                                        </div>
+                                        <div className="ml-auto text-xs text-gray-500 whitespace-nowrap">{activity.action}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </CardBody>
+                )}
+            </Card>
 
             <ConfirmDialog
                 open={confirmDelete}

@@ -1,12 +1,18 @@
-import { Link, useParams } from 'react-router-dom';
-import { useProduct } from './hooks';
+import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useProduct, useDeleteProduct } from './hooks';
 import { Card, CardBody, CardHeader, PageHeader } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
+import { ConfirmDialog } from '../../components/ui/Modal';
 import { formatMoney, classNames } from '../../lib/utils';
+import toast from '../../lib/toast';
+import { useState } from 'react';
 
 export default function ProductDetailPage() {
     const { id } = useParams<{ id: string }>();
+    const navigate = useNavigate();
+    const [confirmDelete, setConfirmDelete] = useState(false);
     const { data: product, isLoading } = useProduct(Number(id));
+    const deleteProduct = useDeleteProduct();
 
     if (isLoading) return <div>Loading...</div>;
     if (!product) return <div>Not found</div>;
@@ -16,7 +22,18 @@ export default function ProductDetailPage() {
             <PageHeader
                 title={product.name}
                 subtitle={`${product.sku} · ${product.type_label}`}
-                actions={<Link to={`/products/${product.id}/edit`}><Button size="sm">Edit</Button></Link>}
+                actions={
+                    <>
+                        <span className={classNames(
+                            'inline-flex px-2 py-0.5 rounded text-xs font-medium',
+                            product.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                        )}>
+                            {product.status}
+                        </span>
+                        <Link to={`/products/${product.id}/edit`}><Button size="sm">Edit</Button></Link>
+                        <Button size="sm" variant="ghost" onClick={() => setConfirmDelete(true)}>Delete</Button>
+                    </>
+                }
             />
 
             <Card>
@@ -67,6 +84,20 @@ export default function ProductDetailPage() {
                     )}
                 </CardBody>
             </Card>
+
+            <ConfirmDialog
+                open={confirmDelete}
+                title="Delete product?"
+                message="This action cannot be undone."
+                onConfirm={async () => {
+                    await deleteProduct.mutateAsync(Number(id));
+                    setConfirmDelete(false);
+                    toast.success('Product deleted');
+                    navigate('/products');
+                }}
+                onCancel={() => setConfirmDelete(false)}
+                danger
+            />
         </>
     );
 }

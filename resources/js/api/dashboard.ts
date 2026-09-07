@@ -20,12 +20,12 @@ export interface UpcomingBilling {
 }
 
 export const dashboardApi = {
-    summary: () =>
-        api.get<{ data: DashboardSummary }>('/dashboard/summary').then((r) => r.data.data),
-    recentInvoices: () =>
-        api.get<{ data: Invoice[] }>('/dashboard/recent-invoices').then((r) => r.data.data),
-    overdueInvoices: () =>
-        api.get<{ data: Invoice[] }>('/dashboard/overdue-invoices').then((r) => r.data.data),
-    upcomingBilling: () =>
-        api.get<{ data: UpcomingBilling[] }>('/dashboard/upcoming-billing').then((r) => r.data.data),
+    summary: (filters: { from?: string; to?: string } = {}) =>
+        api.get<{ data: DashboardSummary }>('/dashboard/summary', { params: filters }).then((r) => r.data.data),
+    recentInvoices: (filters: { from?: string; to?: string } = {}) =>
+        api.get<{ data: Invoice[] }>('/dashboard/recent-invoices', { params: filters }).then((r) => r.data.data),
+    overdueInvoices: (filters: { from?: string; to?: string } = {}) =>
+        api.get<{ data: Invoice[] }>('/dashboard/overdue-invoices', { params: filters }).then((r) => r.data.data),
+    upcomingBilling: (filters: { from?: string; to?: string } = {}) =>
+        api.get<{ data: UpcomingBilling[] }>('/dashboard/upcoming-billing', { params: filters }).then((r) => r.data.data),
 };

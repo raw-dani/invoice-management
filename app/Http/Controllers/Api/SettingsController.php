@@ -8,6 +8,7 @@ use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class SettingsController extends Controller
 {
@@ -73,6 +74,27 @@ class SettingsController extends Controller
         }
 
         return response()->json(['message' => 'Test email sent successfully.']);
+    }
+
+    public function uploadLogo(Request $request): JsonResponse
+    {
+        $request->validate([
+            'logo' => ['required', 'image', 'max:2048'],
+        ]);
+
+        $company = Company::findOrFail(auth()->user()->company_id);
+
+        if ($company->logo && Storage::disk('public')->exists($company->logo)) {
+            Storage::disk('public')->delete($company->logo);
+        }
+
+        $path = $request->file('logo')->store('company-logos', 'public');
+        $company->update(['logo' => $path]);
+
+        return response()->json([
+            'data' => ['logo' => asset('storage/' . $path)],
+            'message' => 'Logo uploaded successfully.',
+        ]);
     }
 
     private function validateGroup(string $group): void

@@ -6,6 +6,7 @@ import { Input, Select, Field, Textarea } from '../../components/ui/Form';
 import Button from '../../components/ui/Button';
 import { useQuery } from '@tanstack/react-query';
 import { taxesApi } from '../../api/taxes';
+import toast from '../../lib/toast';
 
 type FormData = {
     name: string;
@@ -54,12 +55,18 @@ export default function ProductFormPage() {
             ...data,
             billing_cycle: isSubscription ? data.billing_cycle : null,
         };
-        if (!isEdit) {
-            const created = await createMutation.mutateAsync(payload);
-            navigate(`/products/${created.id}`);
-        } else if (id) {
-            await updateMutation.mutateAsync({ id: Number(id), data: payload });
-            navigate(`/products/${id}`);
+        try {
+            if (isEdit && id) {
+                await updateMutation.mutateAsync({ id: Number(id), data: payload });
+                toast.success('Product updated successfully.');
+                navigate(`/products/${id}`);
+            } else {
+                const created = await createMutation.mutateAsync(payload);
+                toast.success('Product created successfully.');
+                navigate(`/products/${created.id}`);
+            }
+        } catch (e) {
+            toast.error('Failed to save product.');
         }
     };
 

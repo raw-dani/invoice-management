@@ -18,6 +18,7 @@ class ActivityLogController extends Controller
 
         if ($request->filled('action')) $query->where('action', $request->string('action'));
         if ($request->filled('subject_type')) $query->where('subject_type', 'like', '%' . $request->string('subject_type') . '%');
+        if ($request->filled('subject_id')) $query->where('subject_id', $request->integer('subject_id'));
         if ($request->filled('user_id')) $query->where('user_id', $request->integer('user_id'));
         if ($request->filled('from')) $query->whereDate('created_at', '>=', $request->date('from'));
         if ($request->filled('to')) $query->whereDate('created_at', '<=', $request->date('to'));

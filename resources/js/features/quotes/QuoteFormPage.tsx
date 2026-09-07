@@ -8,6 +8,7 @@ import Button from '../../components/ui/Button';
 import { ProductPicker } from '../../components/ProductPicker';
 import { QuickAddCustomer } from '../../components/QuickAddCustomer';
 import { formatMoney, classNames } from '../../lib/utils';
+import toast from '../../lib/toast';
 import type { Product } from '../../types';
 import type { QuoteInput } from '../../api/quotes';
 
@@ -130,12 +131,18 @@ export default function QuoteFormPage() {
                 tax_rate: i.tax_rate,
             })),
         };
-        if (!isEdit) {
-            const created = await createMutation.mutateAsync(payload);
-            navigate(`/quotes/${created.id}`);
-        } else if (id) {
-            await updateMutation.mutateAsync({ id: Number(id), data: payload });
-            navigate(`/quotes/${id}`);
+        try {
+            if (!isEdit) {
+                const created = await createMutation.mutateAsync(payload);
+                toast.success('Quote created successfully.');
+                navigate(`/quotes/${created.id}`);
+            } else if (id) {
+                await updateMutation.mutateAsync({ id: Number(id), data: payload });
+                toast.success('Quote updated successfully.');
+                navigate(`/quotes/${id}`);
+            }
+        } catch (e) {
+            toast.error('Failed to save quote.');
         }
     };
 

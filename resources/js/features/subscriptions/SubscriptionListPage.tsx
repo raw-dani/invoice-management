@@ -2,12 +2,14 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useSubscriptions, useDeleteSubscription, subscriptionKeys } from './hooks';
 import { subscriptionsApi, SubscriptionFilters } from '../../api/subscriptions';
+import { useCustomers } from '../customers/hooks';
 import { EmptyState, PageHeader, StatusBadge } from '../../components/ui/Display';
 import { DataTable, Pagination } from '../../components/ui/Table';
 import { Input, Select } from '../../components/ui/Form';
 import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
-import { formatDate } from '../../lib/utils';
+import { formatDate, formatMoney } from '../../lib/utils';
+import toast from '../../lib/toast';
 import { useSelection } from '../../components/bulk/useSelection';
 import { useBulkDelete, useBulkAction } from '../../components/bulk/useBulk';
 import { BulkBar } from '../../components/bulk/BulkBar';
@@ -18,6 +20,7 @@ export default function SubscriptionListPage() {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
     const { data, isLoading } = useSubscriptions(filters);
+    const { data: customersData } = useCustomers({ per_page: 200 });
     const deleteMutation = useDeleteSubscription();
     const selection = useSelection();
     const bulkDelete = useBulkDelete((id) => deleteMutation.mutateAsync(id), [subscriptionKeys]);
@@ -26,12 +29,20 @@ export default function SubscriptionListPage() {
         [subscriptionKeys]
     );
 
+    const handleDelete = async () => {
+        if (!deleteId) return;
+        await deleteMutation.mutateAsync(deleteId);
+        toast.success('Subscription deleted successfully.');
+        setDeleteId(null);
+    };
+
     const handleBulkDelete = async () => {
         const ids = Array.from(selection.selected).map(Number);
         const result = await bulkDelete.mutateAsync(ids);
         setBulkDeleteOpen(false);
         selection.clear();
         reportBulkDelete(result.total, result.failed);
+        if (result.failed === 0) toast.success(`${result.total} subscription(s) deleted.`);
     };
 
     const handleBulkAction = async (action: 'pause' | 'resume' | 'cancel') => {
@@ -39,6 +50,7 @@ export default function SubscriptionListPage() {
         const result = await bulkAction.mutateAsync({ ids, action });
         selection.clear();
         reportBulkResult(action, result.data.processed ?? 0, result.data.failed ?? 0);
+        if ((result.data.processed ?? 0) > 0) toast.success(`${result.data.processed} subscription(s) ${action}d.`);
     };
 
     return (
@@ -50,6 +62,10 @@ export default function SubscriptionListPage() {
                     <Select className="max-w-[150px]" defaultValue="" onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined, page: 1 })}>
                         <option value="">All statuses</option>
                         <option value="active">Active</option><option value="paused">Paused</option><option value="cancelled">Cancelled</option><option value="expired">Expired</option>
+                    </Select>
+                    <Select className="max-w-[180px]" defaultValue="" onChange={(e) => setFilters({ ...filters, customer_id: e.target.value ? Number(e.target.value) : undefined, page: 1 })}>
+                        <option value="">All customers</option>
+                        {customersData?.data.map((c) => <option key={c.id} value={c.id}>{c.company_name}</option>)}
                     </Select>
                 </div>
                 <BulkBar count={selection.count} onClear={selection.clear}>
@@ -72,7 +88,7 @@ export default function SubscriptionListPage() {
                     </>
                 )}
             </div>
-            <ConfirmDialog open={!!deleteId} title="Delete subscription?" message="This action cannot be undone." danger onCancel={() => setDeleteId(null)} onConfirm={async () => { if (deleteId) await deleteMutation.mutateAsync(deleteId); setDeleteId(null); }} />
+            <ConfirmDialog open={!!deleteId} title="Delete subscription?" message="This action cannot be undone." danger onCancel={() => setDeleteId(null)} onConfirm={handleDelete} />
             <ConfirmDialog open={bulkDeleteOpen} title={`Delete ${selection.count} subscription(s)?`} message="This action cannot be undone." danger confirmText="Delete" onCancel={() => setBulkDeleteOpen(false)} onConfirm={handleBulkDelete} />
         </>
     );

@@ -81,3 +81,12 @@ export function useDuplicateInvoice() {
         onSuccess: () => qc.invalidateQueries({ queryKey: invoiceKeys.all }),
     });
 }
+
+export function useSendInvoiceEmail() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, ...data }: { id: number } & Record<string, unknown>) =>
+            invoicesApi.sendEmail(id, data),
+        onSuccess: () => qc.invalidateQueries({ queryKey: invoiceKeys.all }),
+    });
+}

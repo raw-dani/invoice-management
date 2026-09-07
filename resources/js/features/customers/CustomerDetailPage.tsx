@@ -6,6 +6,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardBody, CardHeader, PageHeader, StatusBadge } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
 import { formatDate, formatMoney } from '../../lib/utils';
+import toast from '../../lib/toast';
 import { useState } from 'react';
 
 const TABS = ['Invoices', 'Quotes', 'Subscriptions', 'Payments', 'Activity'] as const;
@@ -30,7 +31,7 @@ export default function CustomerDetailPage() {
             currency,
             items: [{ description: 'Recurring subscription', quantity: 1, unit_price: Number(price), tax_rate: 0 }],
         }),
-        onSuccess: (subscription) => { queryClient.invalidateQueries({ queryKey: ['customers'] }); navigate(`/subscriptions/${subscription.id}`); },
+        onSuccess: (subscription) => { queryClient.invalidateQueries({ queryKey: ['customers'] }); toast.success('Converted to subscription successfully.'); navigate(`/subscriptions/${subscription.id}`); },
     });
     const { data: customer, isLoading } = useCustomer(Number(id));
     const [tab, setTab] = useState<Tab>('Invoices');

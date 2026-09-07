@@ -13,4 +13,6 @@ export interface ActivityFilters {
 export const activityApi = {
     list: (filters: ActivityFilters = {}) =>
         api.get<Paginated<ActivityLog>>('/activity-logs', { params: filters }).then((r) => r.data),
+    byEntity: (subjectType: string, subjectId: number, filters: Omit<ActivityFilters, 'subject_type' | 'subject_id'> = {}) =>
+        api.get<Paginated<ActivityLog>>('/activity-logs', { params: { ...filters, subject_type: subjectType, subject_id: subjectId } }).then((r) => r.data),
 };

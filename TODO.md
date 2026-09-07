@@ -384,8 +384,12 @@ Catatan: migration Phase 8 masih pending dan harus dijalankan sebelum `billing:p
 - [x] Konfigurasi dompdf
 - [x] Buat `PdfService` untuk render invoice/quote/payment receipt
 - [x] Blade template `pdf.invoice.modern` (Modern template, full features)
+- [x] Blade template `pdf.invoice.professional` (Professional template, serif fonts, formal borders)
+- [x] Blade template `pdf.invoice.classic` (Classic template, traditional business letter style)
+- [x] Blade template `pdf.invoice.compact` (Compact template, minimalist condensed layout)
 - [x] Blade template `pdf.quote.modern` (Modern quote template)
-- [x] Blade template `pdf.payment.receipt` (Payment receipt dengan green-themed)
+- [x] Blade template `pdf.quote.professional` (Professional quote template, formal serif style)
+- [x] Blade template `pdf.quote.corporate` (Corporate quote template, bold corporate feel)
 - [x] Endpoint `GET /api/invoices/{id}/pdf` (stream PDF inline)
 - [x] Endpoint `GET /api/quotes/{id}/pdf` (stream PDF inline)
 - [x] Endpoint `GET /api/payments/{id}/receipt` (stream PDF inline)
@@ -393,8 +397,8 @@ Catatan: migration Phase 8 masih pending dan harus dijalankan sebelum `billing:p
 - [x] Frontend: tombol "Preview PDF" + "Download PDF" di QuoteDetail
 - [x] Frontend: tombol "Preview Receipt" + "Download Receipt" di PaymentDetail
 - [x] Util `lib/pdf.ts` (downloadPdf dengan Bearer auth, openPdfInNewTab)
-- [ ] Template Professional, Classic, Compact (defer)
-- [ ] Komponen `PdfPreview` React (iframe embed inline di page)
+- [x] PdfService resolve template berdasarkan slug yang aktif di database
+- [ ] Preview template (thumbnail atau iframe)
 
 ### Templates — Frontend React
 - [x] Halaman `TemplatesList` (Invoice & Quote) untuk switch template
@@ -807,26 +811,26 @@ resources/
 | Phase 6: Payment | 🟢 Mostly Done | 90% |
 | Phase 7: Subscription | 🟡 In Progress | 75% |
 | Phase 8: Billing Scheduler | 🟡 In Progress | 85% |
-| Phase 9: Email Automation | 🟢 Mostly Done | 90% |
-| Phase 10: Templates | 🟡 In Progress | 70% |
-| Phase 11: Dashboard | 🟡 In Progress | 90% |
-| Phase 12: Activity Log | 🟡 In Progress | 65% |
-| Phase 13: Reports | 🟡 In Progress | 75% |
-| Phase 14: Settings | 🟡 In Progress | 90% |
-| Phase 15: Security | 🟡 In Progress | 60% |
-| Phase 16: Multi-Currency | 🟡 In Progress | 80% |
-| Phase 17: Tax System | 🟡 In Progress | 80% |
-| Phase 18: Notification | 🟡 In Progress | 65% |
-| Phase 19: Testing | 🟡 In Progress (suite hijau: 27 passed, scaffold web-auth tests dihapus) | 45% |
+| Phase 9: Email Automation | 🟢 Mostly Done | 95% |
+| Phase 10: Templates | 🟡 In Progress | 95% |
+| Phase 11: Dashboard | 🟡 In Progress | 95% |
+| Phase 12: Activity Log | 🟡 In Progress | 80% |
+| Phase 13: Reports | 🟡 In Progress | 80% |
+| Phase 14: Settings | 🟡 In Progress | 95% |
+| Phase 15: Security | 🟡 In Progress | 65% |
+| Phase 16: Multi-Currency | 🟡 In Progress | 85% |
+| Phase 17: Tax System | 🟡 In Progress | 85% |
+| Phase 18: Notification | 🟡 In Progress | 70% |
+| Phase 19: Testing | 🟡 In Progress (suite hijau: 27 passed, scaffold web-auth tests dihapus) | 50% |
 | Phase 20: Production Prep | ⬜ Not Started | 0% |
 | Phase 21: Go Live | ⬜ Not Started | 0% |
 | Phase 22: Future Features | ⬜ Not Started | 0% |
 
-**Overall Progress: 40%**
+**Overall Progress: 50%**
 
 ---
 
-*Last updated: 6 September 2026*
+*Last updated: 7 September 2026*
 *Stack: Laravel 10 API + React 18 + Vite + TS + MySQL*
 
 ## ✅ Yang Sudah Berfungsi (E2E Tested)
@@ -843,3 +847,11 @@ resources/
 - SPA shell rendering dengan CSRF token
 - Vite build sukses: 174 modules, 429 KB JS / 28 KB CSS
 - TypeScript typecheck zero error
+- Send invoice email (InvoiceMail + SendInvoiceEmail job + PDF attachment)
+- Send quote email (QuoteMail + SendQuoteEmail job + PDF attachment)
+- Company logo upload (Settings → Company tab)
+- User profile & change password (`/profile`)
+- Activity log tabs di InvoiceDetail & QuoteDetail
+- Dashboard date range filter (from/to)
+- PDF templates: Modern, Professional, Classic, Compact (invoice) + Modern, Professional, Corporate (quote)
+- PdfService resolves template slug dari database untuk generate PDF

@@ -47,4 +47,6 @@ export const invoicesApi = {
         api.post<{ data: Invoice }>(`/invoices/${id}/void`).then((r) => r.data.data),
     duplicate: (id: number) =>
         api.post<{ data: Invoice }>(`/invoices/${id}/duplicate`).then((r) => r.data.data),
+    sendEmail: (id: number, data?: { to?: string; subject?: string; message?: string }) =>
+        api.post<{ success: boolean; message: string }>(`/invoices/${id}/email`, data).then((r) => r.data),
 };

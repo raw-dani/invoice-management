@@ -4,6 +4,7 @@ import { useCustomer, useCreateCustomer, useUpdateCustomer } from './hooks';
 import { Card, CardBody, CardHeader, PageHeader } from '../../components/ui/Display';
 import { Input, Select, Field, Textarea } from '../../components/ui/Form';
 import Button from '../../components/ui/Button';
+import toast from '../../lib/toast';
 import type { Customer } from '../../types';
 
 type FormData = Omit<Customer, 'id' | 'company_id' | 'customer_number' | 'created_at' | 'updated_at' | 'status_color'>;
@@ -35,13 +36,18 @@ export default function CustomerFormPage() {
 
     const onSubmit = async (data: FormData) => {
         const payload: Partial<Customer> = { ...data };
-        if (createMutation.mutateAsync) {
-            const created = await createMutation.mutateAsync(payload);
-            navigate(`/customers/${created.id}`);
-        }
-        if (isEdit && id) {
-            await updateMutation.mutateAsync({ id: Number(id), data: payload });
-            navigate(`/customers/${id}`);
+        try {
+            if (isEdit && id) {
+                await updateMutation.mutateAsync({ id: Number(id), data: payload });
+                toast.success('Customer updated successfully.');
+                navigate(`/customers/${id}`);
+            } else {
+                const created = await createMutation.mutateAsync(payload);
+                toast.success('Customer created successfully.');
+                navigate(`/customers/${created.id}`);
+            }
+        } catch (e) {
+            toast.error('Failed to save customer.');
         }
     };
 

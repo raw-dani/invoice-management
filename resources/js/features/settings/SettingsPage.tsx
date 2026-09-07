@@ -4,6 +4,7 @@ import { settingsApi, SettingsGroup } from '../../api/settings';
 import { Card, CardBody, CardHeader, PageHeader } from '../../components/ui/Display';
 import { Input, Select, Textarea } from '../../components/ui/Form';
 import Button from '../../components/ui/Button';
+import toast from '../../lib/toast';
 
 const GROUPS: Array<{ key: SettingsGroup; label: string }> = [
     { key: 'company', label: 'Company' }, { key: 'invoice', label: 'Invoice' },
@@ -15,20 +16,78 @@ export default function SettingsPage() {
     const queryClient = useQueryClient();
     const query = useQuery({ queryKey: ['settings', group], queryFn: () => settingsApi.get(group) });
     const [values, setValues] = useState<Record<string, string | null>>({});
+    const [logoFile, setLogoFile] = useState<File | null>(null);
+    const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
     useEffect(() => { if (query.data) setValues(query.data); }, [query.data]);
+
     const save = useMutation({ mutationFn: () => settingsApi.update(group, values), onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings', group] }) });
+    const uploadLogo = useMutation({
+        mutationFn: (file: File) => settingsApi.uploadLogo(file),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['settings', 'company'] });
+            setValues((prev) => ({ ...prev, logo: data.logo }));
+            setLogoFile(null);
+            setLogoPreview(null);
+            toast.success('Logo uploaded successfully.');
+        },
+        onError: () => toast.error('Failed to upload logo.'),
+    });
+
     const update = (key: string, value: string) => setValues({ ...values, [key]: value });
+
+    const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] ?? null;
+        setLogoFile(file);
+        if (file) setLogoPreview(URL.createObjectURL(file));
+    };
+
+    const handleUploadLogo = () => {
+        if (!logoFile) return;
+        uploadLogo.mutate(logoFile);
+    };
     return <>
         <PageHeader title="Settings" subtitle="Configure company, billing, email, and payment preferences." />
         <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
             <Card><CardBody className="space-y-1">{GROUPS.map((item) => <button key={item.key} onClick={() => setGroup(item.key)} className={`w-full text-left px-3 py-2 rounded text-sm ${group === item.key ? 'bg-indigo-50 text-indigo-700 font-medium' : 'hover:bg-gray-50'}`}>{item.label}</button>)}</CardBody></Card>
-            <Card><CardHeader><h3 className="font-medium">{GROUPS.find((item) => item.key === group)?.label} Settings</h3></CardHeader><CardBody>{query.isLoading ? <div>Loading...</div> : <div className="space-y-4 max-w-2xl">{group === 'company' ? <CompanyFields values={values} update={update} /> : <GroupFields group={group} values={values} update={update} />}{group === 'email' && <TestEmail />}<div className="flex justify-end gap-2 pt-2"><Button loading={save.isPending} onClick={() => save.mutate()}>Save Changes</Button></div></div>}</CardBody></Card>
+                <Card><CardHeader><h3 className="font-medium">{GROUPS.find((item) => item.key === group)?.label} Settings</h3></CardHeader><CardBody>{query.isLoading ? <div>Loading...</div> : <div className="space-y-4 max-w-2xl">{group === 'company' ? <CompanyFields values={values} update={update} logoPreview={logoPreview} logoFile={logoFile} onLogoChange={handleLogoChange} onUploadLogo={handleUploadLogo} uploadLogoMutation={uploadLogo} /> : <GroupFields group={group} values={values} update={update} />}{group === 'email' && <TestEmail />}<div className="flex justify-end gap-2 pt-2"><Button loading={save.isPending} onClick={() => save.mutate()}>Save Changes</Button></div></div>}</CardBody></Card>
         </div>
     </>;
 }
 
-function CompanyFields({ values, update }: { values: Record<string, string | null>; update: (key: string, value: string) => void }) {
-    return <><Field label="Company name"><Input value={values.name ?? ''} onChange={(e) => update('name', e.target.value)} /></Field><Field label="Email"><Input type="email" value={values.email ?? ''} onChange={(e) => update('email', e.target.value)} /></Field><Field label="Phone"><Input value={values.phone ?? ''} onChange={(e) => update('phone', e.target.value)} /></Field><Field label="Website"><Input value={values.website ?? ''} onChange={(e) => update('website', e.target.value)} /></Field><Field label="Address"><Textarea value={values.address ?? ''} onChange={(e) => update('address', e.target.value)} /></Field><Field label="Tax number"><Input value={values.tax_number ?? ''} onChange={(e) => update('tax_number', e.target.value)} /></Field></>;
+function CompanyFields({ values, update, logoPreview, logoFile, onLogoChange, onUploadLogo, uploadLogoMutation }: { values: Record<string, string | null>; update: (key: string, value: string) => void; logoPreview: string | null; logoFile: File | null; onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void; onUploadLogo: () => void; uploadLogoMutation: any }) {
+    const logoUrl = (() => {
+        const raw = logoPreview || values.logo;
+        if (!raw) return null;
+        if (raw.startsWith('http')) return raw;
+        if (raw.startsWith('/storage/')) return raw;
+        return '/storage/' + raw;
+    })();
+
+    return <div className="space-y-4">
+        <div className="space-y-1">
+            <span className="block text-sm font-medium text-gray-700">Logo</span>
+            <div className="flex items-center gap-4">
+                <div className="w-16 h-16 border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                    {logoUrl ? (
+                        <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                    ) : (
+                        <span className="text-xs text-gray-400">No logo</span>
+                    )}
+                </div>
+                <div className="space-y-2">
+                    <Input type="file" accept="image/*" onChange={onLogoChange} />
+                    <Button type="button" size="sm" variant="secondary" disabled={!logoFile || uploadLogoMutation.isPending} loading={uploadLogoMutation.isPending} onClick={onUploadLogo}>Upload Logo</Button>
+                </div>
+            </div>
+        </div>
+        <Field label="Company name"><Input value={values.name ?? ''} onChange={(e) => update('name', e.target.value)} /></Field>
+        <Field label="Email"><Input type="email" value={values.email ?? ''} onChange={(e) => update('email', e.target.value)} /></Field>
+        <Field label="Phone"><Input value={values.phone ?? ''} onChange={(e) => update('phone', e.target.value)} /></Field>
+        <Field label="Website"><Input value={values.website ?? ''} onChange={(e) => update('website', e.target.value)} /></Field>
+        <Field label="Address"><Textarea value={values.address ?? ''} onChange={(e) => update('address', e.target.value)} /></Field>
+        <Field label="Tax number"><Input value={values.tax_number ?? ''} onChange={(e) => update('tax_number', e.target.value)} /></Field>
+    </div>;
 }
 
 function GroupFields({ group, values, update }: { group: Exclude<SettingsGroup, 'company'>; values: Record<string, string | null>; update: (key: string, value: string) => void }) {

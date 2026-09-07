@@ -8,6 +8,7 @@ import { Input, Select } from '../../components/ui/Form';
 import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { formatDate } from '../../lib/utils';
+import toast from '../../lib/toast';
 import { useSelection } from '../../components/bulk/useSelection';
 import { useBulkDelete, useBulkStatus } from '../../components/bulk/useBulk';
 import { BulkBar } from '../../components/bulk/BulkBar';
@@ -31,6 +32,7 @@ export default function CustomerListPage() {
     const handleDelete = async () => {
         if (!deleteId) return;
         await deleteCustomer.mutateAsync(deleteId);
+        toast.success('Customer deleted successfully.');
         setDeleteId(null);
     };
 
@@ -40,6 +42,7 @@ export default function CustomerListPage() {
         setBulkDeleteOpen(false);
         selection.clear();
         reportBulkDelete(result.total, result.failed);
+        if (result.failed === 0) toast.success(`${result.total} customer(s) deleted.`);
     };
 
     const handleBulkStatus = async (status: Customer['status']) => {
@@ -47,6 +50,7 @@ export default function CustomerListPage() {
         const result = await bulkStatus.mutateAsync({ ids, status });
         selection.clear();
         reportBulkResult(`Set ${status}`, result.data.updated, ids.length - result.data.updated);
+        if (result.data.updated > 0) toast.success(`${result.data.updated} customer(s) updated.`);
     };
 
     return (

@@ -6,6 +6,7 @@ import { useProducts } from '../products/hooks';
 import { Card, CardBody, CardHeader, PageHeader } from '../../components/ui/Display';
 import { Field, Input, Select, Textarea } from '../../components/ui/Form';
 import Button from '../../components/ui/Button';
+import toast from '../../lib/toast';
 
 type FormData = {
     customer_id: number;
@@ -38,9 +39,19 @@ export default function SubscriptionFormPage() {
     if (isEdit && isLoading) return <div>Loading...</div>;
     const onSubmit = async (data: FormData) => {
         const payload = { ...data, end_date: data.end_date || null };
-        if (isEdit) await updateMutation.mutateAsync({ id: Number(id), data: payload });
-        else await createMutation.mutateAsync(payload);
-        navigate('/subscriptions');
+        try {
+            if (isEdit) {
+                await updateMutation.mutateAsync({ id: Number(id), data: payload });
+                toast.success('Subscription updated successfully.');
+                navigate(`/subscriptions/${id}`);
+            } else {
+                const created = await createMutation.mutateAsync(payload);
+                toast.success('Subscription created successfully.');
+                navigate(`/subscriptions/${created.id}`);
+            }
+        } catch (e) {
+            toast.error('Failed to save subscription.');
+        }
     };
 
     return <>

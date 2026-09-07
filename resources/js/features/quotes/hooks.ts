@@ -105,3 +105,12 @@ export function useDuplicateQuote() {
         onSuccess: () => qc.invalidateQueries({ queryKey: quoteKeys.all }),
     });
 }
+
+export function useSendQuoteEmail() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, ...data }: { id: number } & Record<string, unknown>) =>
+            quotesApi.sendEmail(id, data),
+        onSuccess: () => qc.invalidateQueries({ queryKey: quoteKeys.all }),
+    });
+}

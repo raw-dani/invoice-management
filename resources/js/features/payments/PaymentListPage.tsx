@@ -6,13 +6,14 @@ import { invoiceKeys } from '../invoices/hooks';
 import { PageHeader, EmptyState } from '../../components/ui/Display';
 import { DataTable, Pagination } from '../../components/ui/Table';
 import { Input, Select } from '../../components/ui/Form';
+import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { formatMoney, formatDate } from '../../lib/utils';
+import toast from '../../lib/toast';
 import { useSelection } from '../../components/bulk/useSelection';
 import { useBulkDelete } from '../../components/bulk/useBulk';
 import { BulkBar } from '../../components/bulk/BulkBar';
 import { reportBulkDelete } from '../../components/bulk/result';
-import Button from '../../components/ui/Button';
 
 const METHODS = [
     { value: '', label: 'All methods' },
@@ -28,7 +29,7 @@ export default function PaymentListPage() {
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
 
-    const { data, isLoading } = usePayments(filters);
+    const { data, isLoading, error } = usePayments(filters);
     const deletePayment = useDeletePayment();
     const selection = useSelection();
     const bulkDelete = useBulkDelete((id) => paymentsApi.remove(id), [paymentKeys, invoiceKeys]);
@@ -36,6 +37,7 @@ export default function PaymentListPage() {
     const handleDelete = async () => {
         if (!deleteId) return;
         await deletePayment.mutateAsync(deleteId);
+        toast.success('Payment deleted successfully.');
         setDeleteId(null);
     };
 
@@ -45,16 +47,19 @@ export default function PaymentListPage() {
         setBulkDeleteOpen(false);
         selection.clear();
         reportBulkDelete(result.total, result.failed);
+        if (result.failed === 0) toast.success(`${result.total} payment(s) deleted.`);
     };
 
     const total = data?.data.reduce((s, p) => s + Number(p.amount), 0) ?? 0;
+
+    if (error) return <div className="p-8 text-center text-sm text-red-600">Failed to load payments. Please try again.</div>;
 
     return (
         <>
             <PageHeader title="Payments" />
 
             <div className="bg-white shadow rounded-lg">
-                <div className="px-5 py-3 border-b flex gap-3">
+                <div className="px-5 py-3 border-b flex gap-3 flex-wrap">
                     <Input
                         placeholder="Search payment # / reference..."
                         className="max-w-xs"
@@ -67,6 +72,18 @@ export default function PaymentListPage() {
                     >
                         {METHODS.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
                     </Select>
+                    <Input
+                        type="date"
+                        className="max-w-[160px]"
+                        placeholder="From"
+                        onChange={(e) => setFilters({ ...filters, from: e.target.value || undefined, page: 1 })}
+                    />
+                    <Input
+                        type="date"
+                        className="max-w-[160px]"
+                        placeholder="To"
+                        onChange={(e) => setFilters({ ...filters, to: e.target.value || undefined, page: 1 })}
+                    />
                 </div>
 
                 <BulkBar count={selection.count} onClear={selection.clear}>
