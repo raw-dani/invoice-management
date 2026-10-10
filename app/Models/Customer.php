@@ -23,6 +23,11 @@ class Customer extends Model
         'tax_number',
         'notes',
         'status',
+        'is_demo',
+    ];
+
+    protected $casts = [
+        'is_demo' => 'boolean',
     ];
 
     /**

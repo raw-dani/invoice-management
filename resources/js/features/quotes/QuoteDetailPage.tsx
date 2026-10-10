@@ -12,7 +12,7 @@ import {
 import { useEntityActivityLogs } from '../activity/hooks';
 import { Card, CardBody, CardHeader, PageHeader, StatusBadge, EmptyState } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
-import { ConfirmDialog } from '../../components/ui/Modal';
+import { Modal, ConfirmDialog } from '../../components/ui/Modal';
 import { quotesApi } from '../../api/quotes';
 import { formatMoney, formatDate } from '../../lib/utils';
 import { useState } from 'react';
@@ -24,6 +24,7 @@ export default function QuoteDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
     const [confirmDelete, setConfirmDelete] = useState(false);
+    const [confirmConvert, setConfirmConvert] = useState(false);
     const [showActivity, setShowActivity] = useState(false);
 
     const { data: quote, isLoading } = useQuote(Number(id));
@@ -122,11 +123,7 @@ export default function QuoteDetailPage() {
                             }}>Reject</Button>
                         )}
                         {canConvert && (
-                            <Button size="sm" onClick={async () => {
-                                const invoice = await convertQuote.mutateAsync(quote.id);
-                                toast.success('Converted to invoice');
-                                navigate(`/invoices/${invoice.id}`);
-                            }}>Convert to Invoice</Button>
+                            <Button size="sm" onClick={() => setConfirmConvert(true)}>Convert to Invoice</Button>
                         )}
                         {!['draft'].includes(quote.status) && (
                             <Button size="sm" variant="secondary" loading={sendEmail.isPending} onClick={async () => {
@@ -225,6 +222,77 @@ export default function QuoteDetailPage() {
                     </CardBody>
                 )}
             </Card>
+
+            <Modal
+                open={confirmConvert}
+                onClose={() => setConfirmConvert(false)}
+                title="Convert Quote to Invoice"
+                size="lg"
+            >
+                <div className="space-y-4">
+                    <p className="text-sm text-gray-600">
+                        Are you sure you want to convert quote <strong className="text-gray-900">{quote.quote_number}</strong> into an invoice?
+                        This will generate a new draft invoice based on the accepted items and totals below.
+                    </p>
+
+                    <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-2 border border-gray-200">
+                        <div className="flex justify-between">
+                            <span className="text-gray-500">Customer</span>
+                            <span className="font-medium text-gray-900">{quote.customer?.company_name || quote.customer?.name}</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-500">Items Count</span>
+                            <span className="font-medium text-gray-900">{quote.items?.length || 0} line items</span>
+                        </div>
+                        <div className="flex justify-between">
+                            <span className="text-gray-500">Subtotal</span>
+                            <span>{formatMoney(quote.subtotal, quote.currency)}</span>
+                        </div>
+                        {quote.discount > 0 && (
+                            <div className="flex justify-between text-gray-600">
+                                <span>Discount</span>
+                                <span>-{formatMoney(quote.discount_type === 1 ? quote.subtotal * (quote.discount / 100) : quote.discount, quote.currency)}</span>
+                            </div>
+                        )}
+                        {quote.tax_amount > 0 && (
+                            <div className="flex justify-between text-gray-600">
+                                <span>Tax ({quote.tax_rate}%)</span>
+                                <span>{formatMoney(quote.tax_amount, quote.currency)}</span>
+                            </div>
+                        )}
+                        <div className="flex justify-between border-t border-gray-200 pt-2 font-semibold text-gray-900 text-base">
+                            <span>Total Invoice Amount</span>
+                            <span className="text-indigo-600">{formatMoney(quote.total, quote.currency)}</span>
+                        </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                            variant="secondary"
+                            onClick={() => setConfirmConvert(false)}
+                            disabled={convertQuote.isPending}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="primary"
+                            loading={convertQuote.isPending}
+                            onClick={async () => {
+                                try {
+                                    const invoice = await convertQuote.mutateAsync(quote.id);
+                                    toast.success('Quote successfully converted to invoice');
+                                    setConfirmConvert(false);
+                                    navigate(`/invoices/${invoice.id}`);
+                                } catch (err: any) {
+                                    toast.error(err?.response?.data?.message || 'Failed to convert quote');
+                                }
+                            }}
+                        >
+                            Confirm & Convert
+                        </Button>
+                    </div>
+                </div>
+            </Modal>
 
             <ConfirmDialog
                 open={confirmDelete}

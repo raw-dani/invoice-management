@@ -17,12 +17,17 @@ class EmailTemplateController extends Controller
 {
     public function index(): AnonymousResourceCollection
     {
-        return EmailTemplateResource::collection(
-            EmailTemplate::where('company_id', auth()->user()->company_id)
-                ->orWhereNull('company_id')
-                ->orderBy('name')
-                ->get()
-        );
+        $companyId = auth()->user()->company_id;
+        $custom = EmailTemplate::where('company_id', $companyId)->get()->keyBy('slug');
+        $defaults = EmailTemplate::whereNull('company_id')->get()->keyBy('slug');
+
+        $slugs = array_unique(array_merge(EmailTemplate::SLUGS, $defaults->keys()->all(), $custom->keys()->all()));
+
+        $templates = collect($slugs)->map(function ($slug) use ($custom, $defaults) {
+            return $custom->get($slug) ?? $defaults->get($slug);
+        })->filter()->values();
+
+        return EmailTemplateResource::collection($templates);
     }
 
     public function store(StoreEmailTemplateRequest $request): JsonResponse
@@ -61,13 +66,10 @@ class EmailTemplateController extends Controller
     public function restore(string $slug): EmailTemplateResource
     {
         abort_unless(in_array($slug, EmailTemplate::SLUGS, true), 404);
+        EmailTemplate::where('company_id', auth()->user()->company_id)->where('slug', $slug)->delete();
         $default = EmailTemplate::whereNull('company_id')->where('slug', $slug)->firstOrFail();
-        $template = EmailTemplate::updateOrCreate(
-            ['company_id' => auth()->user()->company_id, 'slug' => $slug],
-            ['name' => $default->name, 'subject' => $default->subject, 'body' => $default->body, 'is_default' => false]
-        );
 
-        return new EmailTemplateResource($template);
+        return new EmailTemplateResource($default);
     }
 
     public function logs(Request $request): AnonymousResourceCollection

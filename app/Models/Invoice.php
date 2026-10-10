@@ -29,6 +29,7 @@ class Invoice extends Model
         'currency',
         'notes',
         'terms',
+        'is_demo',
     ];
 
     protected $casts = [
@@ -42,6 +43,7 @@ class Invoice extends Model
         'total' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'balance' => 'decimal:2',
+        'is_demo' => 'boolean',
     ];
 
     public function company()

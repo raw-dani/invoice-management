@@ -20,11 +20,13 @@ class Payment extends Model
         'payment_method',
         'reference',
         'notes',
+        'is_demo',
     ];
 
     protected $casts = [
         'payment_date' => 'date',
         'amount'       => 'decimal:2',
+        'is_demo'      => 'boolean',
     ];
 
     public function company()

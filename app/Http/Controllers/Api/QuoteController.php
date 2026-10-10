@@ -14,6 +14,7 @@ use App\Services\QuoteService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class QuoteController extends Controller
@@ -52,29 +53,35 @@ class QuoteController extends Controller
 
     public function store(StoreQuoteRequest $request): JsonResponse
     {
+        $this->authorize('create', Quote::class);
+
         $data = $request->validated();
 
-        $quote = Quote::create([
-            'company_id'    => auth()->user()->company_id,
-            'customer_id'   => $data['customer_id'],
-            'quote_number'  => Quote::generateQuoteNumber(auth()->user()->company_id),
-            'quote_date'    => $data['quote_date'],
-            'valid_until'   => $data['valid_until'] ?? null,
-            'currency'      => $data['currency'],
-            'discount'      => $data['discount'] ?? 0,
-            'discount_type' => $data['discount_type'],
-            'tax_rate'      => $data['tax_rate'] ?? 0,
-            'notes'         => $data['notes'] ?? null,
-            'terms'         => $data['terms'] ?? null,
-            'status'        => 'draft',
-        ]);
+        $quote = DB::transaction(function () use ($data) {
+            $quote = Quote::create([
+                'company_id'    => auth()->user()->company_id,
+                'customer_id'   => $data['customer_id'],
+                'quote_number'  => Quote::generateQuoteNumber(auth()->user()->company_id),
+                'quote_date'    => $data['quote_date'],
+                'valid_until'   => $data['valid_until'] ?? null,
+                'currency'      => $data['currency'],
+                'discount'      => $data['discount'] ?? 0,
+                'discount_type' => $data['discount_type'],
+                'tax_rate'      => $data['tax_rate'] ?? 0,
+                'notes'         => $data['notes'] ?? null,
+                'terms'         => $data['terms'] ?? null,
+                'status'        => 'draft',
+            ]);
 
-        foreach ($data['items'] as $item) {
-            $quote->items()->create($item);
-        }
+            foreach ($data['items'] as $item) {
+                $quote->items()->create($item);
+            }
 
-        $quote->load('items');
-        $quote->calculateTotals();
+            $quote->load('items');
+            $quote->calculateTotals();
+
+            return $quote;
+        });
 
         return (new QuoteResource($quote->load('customer', 'items.product')))
             ->response()
@@ -83,7 +90,7 @@ class QuoteController extends Controller
 
     public function show(Quote $quote): QuoteResource
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('view', $quote);
 
         return new QuoteResource(
             $quote->load('customer', 'items.product')
@@ -92,7 +99,7 @@ class QuoteController extends Controller
 
     public function update(UpdateQuoteRequest $request, Quote $quote): QuoteResource
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('manage', $quote);
 
         if (!in_array($quote->status, ['draft', 'sent', 'viewed', 'rejected', 'expired'], true)) {
             abort(422, 'Only quotes in draft, sent, viewed, rejected, or expired status can be edited.');
@@ -100,21 +107,23 @@ class QuoteController extends Controller
 
         $data = $request->validated();
 
-        $quote->update(collect($data)->except('items')->toArray());
-        $quote->items()->delete();
-        foreach ($data['items'] as $item) {
-            $quote->items()->create($item);
-        }
+        DB::transaction(function () use ($quote, $data) {
+            $quote->update(collect($data)->except('items')->toArray());
+            $quote->items()->delete();
+            foreach ($data['items'] as $item) {
+                $quote->items()->create($item);
+            }
 
-        $quote->refresh()->load('items');
-        $quote->calculateTotals();
+            $quote->refresh()->load('items');
+            $quote->calculateTotals();
+        });
 
         return new QuoteResource($quote->load('customer', 'items.product'));
     }
 
     public function destroy(Quote $quote): JsonResponse
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('delete', $quote);
 
         if (!in_array($quote->status, ['draft', 'rejected', 'expired'], true)) {
             abort(422, 'Only drafts, rejected, or expired quotes can be deleted.');
@@ -128,7 +137,7 @@ class QuoteController extends Controller
 
     public function send(Quote $quote): QuoteResource
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('manage', $quote);
 
         if ($quote->status !== 'draft') {
             abort(422, 'Only draft quotes can be sent.');
@@ -142,7 +151,7 @@ class QuoteController extends Controller
 
     public function accept(Quote $quote): QuoteResource
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('manage', $quote);
 
         if (!in_array($quote->status, ['sent', 'viewed'], true)) {
             abort(422, 'Only sent or viewed quotes can be accepted.');
@@ -156,7 +165,7 @@ class QuoteController extends Controller
 
     public function reject(Quote $quote): QuoteResource
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('manage', $quote);
 
         if (!in_array($quote->status, ['sent', 'viewed', 'accepted'], true)) {
             abort(422, 'Only sent, viewed, or accepted quotes can be rejected.');
@@ -170,7 +179,7 @@ class QuoteController extends Controller
 
     public function duplicate(Quote $quote): JsonResponse
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('manage', $quote);
         $quote->load('items');
 
         $duplicate = \Illuminate\Support\Facades\DB::transaction(function () use ($quote): Quote {
@@ -194,7 +203,7 @@ class QuoteController extends Controller
 
     public function markAsExpired(Quote $quote): QuoteResource
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('manage', $quote);
 
         if (!in_array($quote->status, ['sent', 'viewed'], true)) {
             abort(422, 'Only sent or viewed quotes can be expired.');
@@ -208,7 +217,7 @@ class QuoteController extends Controller
 
     public function convertToInvoice(Quote $quote, QuoteService $quoteService): InvoiceResource
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('manage', $quote);
 
         if ($quote->status !== 'accepted') {
             abort(422, 'Only accepted quotes can be converted to invoice.');
@@ -224,7 +233,7 @@ class QuoteController extends Controller
 
     public function pdf(Quote $quote, PdfService $pdf): Response
     {
-        $this->authorizeCompany($quote);
+        $this->authorize('view', $quote);
         $quote->load('customer', 'items.product');
 
         $pdfContent = $pdf->renderQuote($quote, request()->query('template'));

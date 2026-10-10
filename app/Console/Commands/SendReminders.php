@@ -50,7 +50,7 @@ class SendReminders extends Command
             };
 
             // 3. Reminders for invoices with outstanding balance.
-            $base = fn () => Invoice::whereIn('status', ['sent', 'partially_paid'])
+            $base = fn (array $statuses = ['sent', 'partially_paid']) => Invoice::whereIn('status', $statuses)
                 ->where('company_id', $companyId)
                 ->where('balance', '>', 0)
                 ->whereNotNull('due_date');
@@ -62,10 +62,10 @@ class SendReminders extends Command
                 $send('reminder', $base()->whereDate('due_date', $today)->get()->all());
             }
             if ($wantsOverdue) {
-                $send('overdue', $base()->whereIn('status', ['overdue'])->whereDate('due_date', $today->copy()->subDays(3))->get()->all());
+                $send('overdue', $base(['overdue'])->whereDate('due_date', $today->copy()->subDays(3))->get()->all());
             }
             if ($wantsFinal) {
-                $send('overdue', $base()->whereIn('status', ['overdue'])->whereDate('due_date', $today->copy()->subDays(7))->get()->all());
+                $send('overdue', $base(['overdue'])->whereDate('due_date', $today->copy()->subDays(7))->get()->all());
             }
         }
 

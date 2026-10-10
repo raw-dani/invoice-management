@@ -77,7 +77,7 @@ class PaymentController extends Controller
     {
         $data = $request->validated();
 
-        $this->authorizeInvoice($invoice);
+        $this->authorize('manage', $invoice);
 
         // Guard: don't allow payment on locked statuses
         if (in_array($invoice->status, ['paid', 'void', 'cancelled'], true)) {
@@ -136,13 +136,13 @@ class PaymentController extends Controller
 
     public function show(Payment $payment): PaymentResource
     {
-        $this->authorizeCompany($payment);
+        $this->authorize('view', $payment);
         return new PaymentResource($payment->load(['customer', 'invoice']));
     }
 
     public function destroy(Payment $payment): JsonResponse
     {
-        $this->authorizeCompany($payment);
+        $this->authorize('delete', $payment);
 
         $invoice = $payment->invoice;
         if ($invoice && in_array($invoice->status, ['void', 'cancelled'], true)) {
@@ -168,7 +168,7 @@ class PaymentController extends Controller
 
     public function receipt(Payment $payment, PdfService $pdf): Response
     {
-        $this->authorizeCompany($payment);
+        $this->authorize('view', $payment);
         $payment->load('customer', 'invoice');
 
         $pdfContent = $pdf->renderPaymentReceipt($payment);

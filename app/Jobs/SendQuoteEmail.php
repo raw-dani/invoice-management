@@ -78,6 +78,7 @@ class SendQuoteEmail implements ShouldQueue
                 'quote_id' => $quote->id,
                 'error' => $e->getMessage(),
             ]);
+            throw $e;
         }
     }
 }

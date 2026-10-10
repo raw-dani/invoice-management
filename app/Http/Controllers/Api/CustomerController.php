@@ -57,6 +57,8 @@ class CustomerController extends Controller
 
     public function store(StoreCustomerRequest $request): JsonResponse
     {
+        $this->authorize('create', Customer::class);
+
         $customer = Customer::create([
             ...$request->validated(),
             'company_id'      => auth()->user()->company_id,
@@ -70,7 +72,7 @@ class CustomerController extends Controller
 
     public function show(Customer $customer): CustomerResource
     {
-        $this->authorizeCompany($customer);
+        $this->authorize('view', $customer);
 
         return new CustomerResource($customer);
     }
@@ -81,7 +83,7 @@ class CustomerController extends Controller
      */
     public function overview(Customer $customer): JsonResponse
     {
-        $this->authorizeCompany($customer);
+        $this->authorize('view', $customer);
 
         $invoices = $customer->invoices()->latest()->limit(10)->get();
         $quotes = $customer->quotes()->latest()->limit(10)->get();
@@ -118,7 +120,7 @@ class CustomerController extends Controller
 
     public function update(UpdateCustomerRequest $request, Customer $customer): CustomerResource
     {
-        $this->authorizeCompany($customer);
+        $this->authorize('manage', $customer);
 
         $customer->update($request->validated());
 
@@ -127,7 +129,7 @@ class CustomerController extends Controller
 
     public function destroy(Customer $customer): JsonResponse
     {
-        $this->authorizeCompany($customer);
+        $this->authorize('delete', $customer);
 
         $customer->delete();
 
@@ -156,7 +158,7 @@ class CustomerController extends Controller
 
     public function convertToSubscription(ConvertCustomerSubscriptionRequest $request, Customer $customer): JsonResponse
     {
-        $this->authorizeCompany($customer);
+        $this->authorize('manage', $customer);
         $data = $request->validated();
         $subscription = DB::transaction(function () use ($data, $customer): Subscription {
             $subscription = Subscription::create([

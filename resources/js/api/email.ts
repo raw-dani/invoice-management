@@ -3,6 +3,8 @@ import type { EmailLog, EmailTemplate, Paginated } from '../types';
 
 export const emailApi = {
     templates: () => api.get<{ data: EmailTemplate[] }>('/email-templates').then((r) => r.data.data),
+    saveTemplate: (data: { slug: string; name: string; subject: string; body: string }) =>
+        api.post<{ data: EmailTemplate }>('/email-templates', data).then((r) => r.data.data),
     updateTemplate: (id: number, data: Pick<EmailTemplate, 'name' | 'subject' | 'body'>) =>
         api.put<{ data: EmailTemplate }>(`/email-templates/${id}`, data).then((r) => r.data.data),
     restoreTemplate: (slug: string) =>

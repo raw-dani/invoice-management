@@ -48,6 +48,8 @@ class SubscriptionController extends Controller
 
     public function store(StoreSubscriptionRequest $request): JsonResponse
     {
+        $this->authorize('create', Subscription::class);
+
         $data = $request->validated();
         $subscription = DB::transaction(function () use ($data): Subscription {
             $subscription = Subscription::create([
@@ -66,14 +68,14 @@ class SubscriptionController extends Controller
 
     public function show(Subscription $subscription): SubscriptionResource
     {
-        $this->authorizeCompany($subscription);
+        $this->authorize('view', $subscription);
 
         return new SubscriptionResource($subscription->load('customer', 'items.product', 'invoices'));
     }
 
     public function update(UpdateSubscriptionRequest $request, Subscription $subscription): SubscriptionResource|JsonResponse
     {
-        $this->authorizeCompany($subscription);
+        $this->authorize('manage', $subscription);
 
         if ($subscription->status === 'cancelled') {
             return response()->json(['message' => 'Cancelled subscriptions cannot be edited.'], 422);
@@ -91,7 +93,7 @@ class SubscriptionController extends Controller
 
     public function destroy(Subscription $subscription): JsonResponse
     {
-        $this->authorizeCompany($subscription);
+        $this->authorize('delete', $subscription);
 
         if ($subscription->invoices()->exists()) {
             return response()->json(['message' => 'Subscriptions with invoices cannot be deleted.'], 422);
@@ -159,7 +161,7 @@ class SubscriptionController extends Controller
 
     public function generateInvoice(Subscription $subscription): JsonResponse
     {
-        $this->authorizeCompany($subscription);
+        $this->authorize('manage', $subscription);
 
         if ($subscription->status !== 'active') {
             return response()->json(['message' => 'Only active subscriptions can generate invoices.'], 422);
@@ -183,10 +185,10 @@ class SubscriptionController extends Controller
 
     private function changeStatus(Subscription $subscription, string $status, array $allowed): SubscriptionResource
     {
-        $this->authorizeCompany($subscription);
+        $this->authorize('manage', $subscription);
 
         if (!in_array($subscription->status, $allowed, true)) {
-            return response()->json(['message' => "Subscription cannot be changed from {$subscription->status}."], 422);
+            abort(422, "Subscription cannot be changed from {$subscription->status}.");
         }
 
         $subscription->update(['status' => $status]);

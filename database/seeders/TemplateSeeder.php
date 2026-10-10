@@ -25,6 +25,7 @@ class TemplateSeeder extends Seeder
         foreach ([
             ['slug' => 'modern', 'name' => 'Modern'],
             ['slug' => 'professional', 'name' => 'Professional'],
+            ['slug' => 'classic', 'name' => 'Classic'],
             ['slug' => 'corporate', 'name' => 'Corporate'],
         ] as $index => $template) {
             QuoteTemplate::updateOrCreate(

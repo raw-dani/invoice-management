@@ -13,7 +13,7 @@ class EmailTemplateRenderer
      */
     public function buildContext(string $type, $model, array $extra = []): array
     {
-        $company = auth()->user()?->company;
+        $company = $model->company ?? ($model->company_id ? \App\Models\Company::find($model->company_id) : null) ?? auth()->user()?->company;
 
         $ctx = [
             'company' => [

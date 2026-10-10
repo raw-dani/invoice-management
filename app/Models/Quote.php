@@ -26,6 +26,7 @@ class Quote extends Model
         'notes',
         'terms',
         'invoice_id',
+        'is_demo',
     ];
 
     protected $casts = [
@@ -37,6 +38,7 @@ class Quote extends Model
         'tax_rate' => 'decimal:2',
         'tax_amount' => 'decimal:2',
         'total' => 'decimal:2',
+        'is_demo' => 'boolean',
     ];
 
     public function company()

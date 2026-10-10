@@ -22,12 +22,14 @@ class Subscription extends Model
         'invoice_due_days',
         'currency',
         'notes',
+        'is_demo',
     ];
 
     protected $casts = [
         'start_date' => 'date',
         'next_billing_date' => 'date',
         'end_date' => 'date',
+        'is_demo' => 'boolean',
     ];
 
     public function company()

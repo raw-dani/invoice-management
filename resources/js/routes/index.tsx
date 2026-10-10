@@ -1,81 +1,95 @@
+import React, { Suspense } from 'react';
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import AppLayout from '../components/layout/AppLayout';
 import ProtectedRoute from '../components/layout/ProtectedRoute';
-import LoginPage from '../features/auth/LoginPage';
-import RegisterPage from '../features/auth/RegisterPage';
-import DashboardPage from '../features/dashboard/DashboardPage';
-import CustomerListPage from '../features/customers/CustomerListPage';
-import CustomerDetailPage from '../features/customers/CustomerDetailPage';
-import CustomerFormPage from '../features/customers/CustomerFormPage';
-import ProductListPage from '../features/products/ProductListPage';
-import ProductDetailPage from '../features/products/ProductDetailPage';
-import ProductFormPage from '../features/products/ProductFormPage';
-import InvoiceListPage from '../features/invoices/InvoiceListPage';
-import InvoiceDetailPage from '../features/invoices/InvoiceDetailPage';
-import InvoiceFormPage from '../features/invoices/InvoiceFormPage';
-import QuoteListPage from '../features/quotes/QuoteListPage';
-import QuoteDetailPage from '../features/quotes/QuoteDetailPage';
-import QuoteFormPage from '../features/quotes/QuoteFormPage';
-import PaymentListPage from '../features/payments/PaymentListPage';
-import PaymentDetailPage from '../features/payments/PaymentDetailPage';
-import SubscriptionListPage from '../features/subscriptions/SubscriptionListPage';
-import SubscriptionDetailPage from '../features/subscriptions/SubscriptionDetailPage';
-import SubscriptionFormPage from '../features/subscriptions/SubscriptionFormPage';
-import EmailTemplatesPage from '../features/email/EmailTemplatesPage';
-import TemplatesPage from '../features/templates/TemplatesPage';
-import ActivityLogPage from '../features/activity/ActivityLogPage';
-import ReportsPage from '../features/reports/ReportsPage';
-import SettingsPage from '../features/settings/SettingsPage';
-import NotificationsPage from '../features/notifications/NotificationsPage';
-import UsersPage from '../features/users/UsersPage';
-import ProfilePage from '../features/profile/ProfilePage';
+
+const LoadingFallback = () => (
+    <div className="flex items-center justify-center min-h-[300px]">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+    </div>
+);
+
+const withSuspense = (Component: React.ComponentType) => (
+    <Suspense fallback={<LoadingFallback />}>
+        <Component />
+    </Suspense>
+);
+
+const LoginPage = React.lazy(() => import('../features/auth/LoginPage'));
+const RegisterPage = React.lazy(() => import('../features/auth/RegisterPage'));
+const DashboardPage = React.lazy(() => import('../features/dashboard/DashboardPage'));
+const CustomerListPage = React.lazy(() => import('../features/customers/CustomerListPage'));
+const CustomerDetailPage = React.lazy(() => import('../features/customers/CustomerDetailPage'));
+const CustomerFormPage = React.lazy(() => import('../features/customers/CustomerFormPage'));
+const ProductListPage = React.lazy(() => import('../features/products/ProductListPage'));
+const ProductDetailPage = React.lazy(() => import('../features/products/ProductDetailPage'));
+const ProductFormPage = React.lazy(() => import('../features/products/ProductFormPage'));
+const InvoiceListPage = React.lazy(() => import('../features/invoices/InvoiceListPage'));
+const InvoiceDetailPage = React.lazy(() => import('../features/invoices/InvoiceDetailPage'));
+const InvoiceFormPage = React.lazy(() => import('../features/invoices/InvoiceFormPage'));
+const QuoteListPage = React.lazy(() => import('../features/quotes/QuoteListPage'));
+const QuoteDetailPage = React.lazy(() => import('../features/quotes/QuoteDetailPage'));
+const QuoteFormPage = React.lazy(() => import('../features/quotes/QuoteFormPage'));
+const PaymentListPage = React.lazy(() => import('../features/payments/PaymentListPage'));
+const PaymentDetailPage = React.lazy(() => import('../features/payments/PaymentDetailPage'));
+const SubscriptionListPage = React.lazy(() => import('../features/subscriptions/SubscriptionListPage'));
+const SubscriptionDetailPage = React.lazy(() => import('../features/subscriptions/SubscriptionDetailPage'));
+const SubscriptionFormPage = React.lazy(() => import('../features/subscriptions/SubscriptionFormPage'));
+const EmailTemplatesPage = React.lazy(() => import('../features/email/EmailTemplatesPage'));
+const TemplatesPage = React.lazy(() => import('../features/templates/TemplatesPage'));
+const ActivityLogPage = React.lazy(() => import('../features/activity/ActivityLogPage'));
+const ReportsPage = React.lazy(() => import('../features/reports/ReportsPage'));
+const SettingsPage = React.lazy(() => import('../features/settings/SettingsPage'));
+const NotificationsPage = React.lazy(() => import('../features/notifications/NotificationsPage'));
+const UsersPage = React.lazy(() => import('../features/users/UsersPage'));
+const ProfilePage = React.lazy(() => import('../features/profile/ProfilePage'));
 
 export const router = createBrowserRouter([
-    { path: '/login', element: <LoginPage /> },
-    { path: '/register', element: <RegisterPage /> },
+    { path: '/login', element: withSuspense(LoginPage) },
+    { path: '/register', element: withSuspense(RegisterPage) },
     {
         element: <ProtectedRoute />,
         children: [
             {
                 element: <AppLayout />,
                 children: [
-                    { path: '/', element: <DashboardPage /> },
+                    { path: '/', element: withSuspense(DashboardPage) },
 
-                    { path: '/customers', element: <CustomerListPage /> },
-                    { path: '/customers/new', element: <CustomerFormPage /> },
-                    { path: '/customers/:id', element: <CustomerDetailPage /> },
-                    { path: '/customers/:id/edit', element: <CustomerFormPage /> },
+                    { path: '/customers', element: withSuspense(CustomerListPage) },
+                    { path: '/customers/new', element: withSuspense(CustomerFormPage) },
+                    { path: '/customers/:id', element: withSuspense(CustomerDetailPage) },
+                    { path: '/customers/:id/edit', element: withSuspense(CustomerFormPage) },
 
-                    { path: '/products', element: <ProductListPage /> },
-                    { path: '/products/new', element: <ProductFormPage /> },
-                    { path: '/products/:id', element: <ProductDetailPage /> },
-                    { path: '/products/:id/edit', element: <ProductFormPage /> },
+                    { path: '/products', element: withSuspense(ProductListPage) },
+                    { path: '/products/new', element: withSuspense(ProductFormPage) },
+                    { path: '/products/:id', element: withSuspense(ProductDetailPage) },
+                    { path: '/products/:id/edit', element: withSuspense(ProductFormPage) },
 
-                    { path: '/invoices', element: <InvoiceListPage /> },
-                    { path: '/invoices/new', element: <InvoiceFormPage /> },
-                    { path: '/invoices/:id', element: <InvoiceDetailPage /> },
-                    { path: '/invoices/:id/edit', element: <InvoiceFormPage /> },
+                    { path: '/invoices', element: withSuspense(InvoiceListPage) },
+                    { path: '/invoices/new', element: withSuspense(InvoiceFormPage) },
+                    { path: '/invoices/:id', element: withSuspense(InvoiceDetailPage) },
+                    { path: '/invoices/:id/edit', element: withSuspense(InvoiceFormPage) },
 
-                    { path: '/quotes', element: <QuoteListPage /> },
-                    { path: '/quotes/new', element: <QuoteFormPage /> },
-                    { path: '/quotes/:id', element: <QuoteDetailPage /> },
-                    { path: '/quotes/:id/edit', element: <QuoteFormPage /> },
+                    { path: '/quotes', element: withSuspense(QuoteListPage) },
+                    { path: '/quotes/new', element: withSuspense(QuoteFormPage) },
+                    { path: '/quotes/:id', element: withSuspense(QuoteDetailPage) },
+                    { path: '/quotes/:id/edit', element: withSuspense(QuoteFormPage) },
 
-                    { path: '/payments', element: <PaymentListPage /> },
-                    { path: '/payments/:id', element: <PaymentDetailPage /> },
+                    { path: '/payments', element: withSuspense(PaymentListPage) },
+                    { path: '/payments/:id', element: withSuspense(PaymentDetailPage) },
 
-                    { path: '/subscriptions', element: <SubscriptionListPage /> },
-                    { path: '/subscriptions/new', element: <SubscriptionFormPage /> },
-                    { path: '/subscriptions/:id', element: <SubscriptionDetailPage /> },
-                    { path: '/subscriptions/:id/edit', element: <SubscriptionFormPage /> },
-                    { path: '/email-templates', element: <EmailTemplatesPage /> },
-                    { path: '/templates', element: <TemplatesPage /> },
-                    { path: '/activity-log', element: <ActivityLogPage /> },
-                    { path: '/reports', element: <ReportsPage /> },
-                    { path: '/settings', element: <SettingsPage /> },
-                    { path: '/notifications', element: <NotificationsPage /> },
-                    { path: '/users', element: <UsersPage /> },
-                    { path: '/profile', element: <ProfilePage /> },
+                    { path: '/subscriptions', element: withSuspense(SubscriptionListPage) },
+                    { path: '/subscriptions/new', element: withSuspense(SubscriptionFormPage) },
+                    { path: '/subscriptions/:id', element: withSuspense(SubscriptionDetailPage) },
+                    { path: '/subscriptions/:id/edit', element: withSuspense(SubscriptionFormPage) },
+                    { path: '/email-templates', element: withSuspense(EmailTemplatesPage) },
+                    { path: '/templates', element: withSuspense(TemplatesPage) },
+                    { path: '/activity-log', element: withSuspense(ActivityLogPage) },
+                    { path: '/reports', element: withSuspense(ReportsPage) },
+                    { path: '/settings', element: withSuspense(SettingsPage) },
+                    { path: '/notifications', element: withSuspense(NotificationsPage) },
+                    { path: '/users', element: withSuspense(UsersPage) },
+                    { path: '/profile', element: withSuspense(ProfilePage) },
                 ],
             },
         ],

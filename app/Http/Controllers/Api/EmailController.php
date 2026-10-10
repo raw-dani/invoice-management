@@ -14,6 +14,10 @@ class EmailController extends Controller
 {
     public function sendInvoice(Request $request, Invoice $invoice): JsonResponse
     {
+        if ($invoice->company_id !== auth()->user()->company_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $data = $request->validate([
             'to'      => ['nullable', 'email'],
             'subject' => ['nullable', 'string', 'max:255'],
@@ -36,6 +40,10 @@ class EmailController extends Controller
 
     public function sendQuote(Request $request, Quote $quote): JsonResponse
     {
+        if ($quote->company_id !== auth()->user()->company_id) {
+            abort(403, 'Unauthorized action.');
+        }
+
         $data = $request->validate([
             'to'      => ['nullable', 'email'],
             'subject' => ['nullable', 'string', 'max:255'],

@@ -7,8 +7,41 @@ import { StatusBadge, Card, CardBody, PageHeader } from '../../components/ui/Dis
 import Button from '../../components/ui/Button';
 import { Input } from '../../components/ui/Form';
 
+type DatePreset = 'this_month' | 'last_30' | 'this_year' | 'all' | 'custom';
+
+const formatDateStr = (d: Date) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+};
+
+function getPresetDates(preset: DatePreset) {
+    const now = new Date();
+    const to = formatDateStr(now);
+    if (preset === 'this_month') {
+        const start = new Date(now.getFullYear(), now.getMonth(), 1);
+        return { from: formatDateStr(start), to };
+    }
+    if (preset === 'last_30') {
+        const start = new Date();
+        start.setDate(now.getDate() - 30);
+        return { from: formatDateStr(start), to };
+    }
+    if (preset === 'this_year') {
+        const start = new Date(now.getFullYear(), 0, 1);
+        return { from: formatDateStr(start), to };
+    }
+    if (preset === 'all') {
+        return { from: '2000-01-01', to };
+    }
+    return { from: '', to: '' };
+}
+
 export default function DashboardPage() {
-    const [filters, setFilters] = useState({ from: '', to: '' });
+    const [activePreset, setActivePreset] = useState<DatePreset>('this_year');
+    const [filters, setFilters] = useState(() => getPresetDates('this_year'));
+
     const { data: summary } = useQuery({
         queryKey: ['dashboard', 'summary', filters],
         queryFn: () => dashboardApi.summary(filters),
@@ -26,7 +59,15 @@ export default function DashboardPage() {
         queryFn: () => dashboardApi.upcomingBilling(filters),
     });
 
-    const updateDate = (key: 'from' | 'to', value: string) => setFilters((prev) => ({ ...prev, [key]: value }));
+    const updateDate = (key: 'from' | 'to', value: string) => {
+        setActivePreset('custom');
+        setFilters((prev) => ({ ...prev, [key]: value }));
+    };
+
+    const handlePresetChange = (preset: DatePreset) => {
+        setActivePreset(preset);
+        setFilters(getPresetDates(preset));
+    };
 
     return (
         <>
@@ -40,18 +81,66 @@ export default function DashboardPage() {
                     </>
                 }
             />
-            <Card className="mb-6">
-                <CardBody className="flex flex-wrap gap-3 items-end">
-                    <div>
-                        <label className="block text-xs text-gray-500 mb-1">From</label>
-                        <Input type="date" value={filters.from} onChange={(e) => updateDate('from', e.target.value)} />
+
+            {/* Date Range Filter Header Bar */}
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-3 sm:p-4 mb-6 flex flex-col md:flex-row md:items-center justify-between gap-3">
+                <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider mr-1">Period:</span>
+                    {(['this_month', 'last_30', 'this_year', 'all'] as const).map((p) => {
+                        const labels = {
+                            this_month: 'This Month',
+                            last_30: 'Last 30 Days',
+                            this_year: 'This Year',
+                            all: 'All Time',
+                        };
+                        const isActive = activePreset === p;
+                        return (
+                            <button
+                                key={p}
+                                type="button"
+                                onClick={() => handlePresetChange(p)}
+                                className={`px-3 py-1.5 text-xs rounded-md font-medium transition-colors ${
+                                    isActive
+                                        ? 'bg-indigo-600 text-white shadow-sm'
+                                        : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                                }`}
+                            >
+                                {labels[p]}
+                            </button>
+                        );
+                    })}
+                </div>
+
+                <div className="flex items-center gap-2 flex-wrap">
+                    <div className="flex items-center gap-1.5">
+                        <label className="text-xs text-gray-500 font-medium">From:</label>
+                        <Input
+                            type="date"
+                            value={filters.from}
+                            onChange={(e) => updateDate('from', e.target.value)}
+                            className="text-xs py-1 px-2.5 h-8 w-36"
+                        />
                     </div>
-                    <div>
-                        <label className="block text-xs text-gray-500 mb-1">To</label>
-                        <Input type="date" value={filters.to} onChange={(e) => updateDate('to', e.target.value)} />
+                    <div className="flex items-center gap-1.5">
+                        <label className="text-xs text-gray-500 font-medium">To:</label>
+                        <Input
+                            type="date"
+                            value={filters.to}
+                            onChange={(e) => updateDate('to', e.target.value)}
+                            className="text-xs py-1 px-2.5 h-8 w-36"
+                        />
                     </div>
-                </CardBody>
-            </Card>
+                    {activePreset !== 'this_year' && (
+                        <button
+                            type="button"
+                            onClick={() => handlePresetChange('this_year')}
+                            className="text-xs text-gray-500 hover:text-gray-800 font-medium px-2 py-1 underline"
+                        >
+                            Reset
+                        </button>
+                    )}
+                </div>
+            </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
                 <StatCard label="Total Revenue" value={formatMoney(summary?.total_revenue ?? 0)} accent="text-green-600" />

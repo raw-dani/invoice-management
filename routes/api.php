@@ -98,17 +98,27 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // PDF templates
     Route::get('invoice-templates', [TemplateController::class, 'invoiceTemplates']);
+    Route::get('invoice-templates/{slug}/preview', [TemplateController::class, 'previewInvoice']);
     Route::post('invoice-templates/{invoiceTemplate}/activate', [TemplateController::class, 'activateInvoice']);
     Route::get('quote-templates', [TemplateController::class, 'quoteTemplates']);
+    Route::get('quote-templates/{slug}/preview', [TemplateController::class, 'previewQuote']);
     Route::post('quote-templates/{quoteTemplate}/activate', [TemplateController::class, 'activateQuote']);
     Route::get('activity-logs', [ActivityLogController::class, 'index']);
     Route::get('reports/revenue', [ReportController::class, 'revenue']);
     Route::get('reports/invoices', [ReportController::class, 'invoices']);
     Route::get('reports/customers', [ReportController::class, 'customers']);
     Route::get('reports/subscriptions', [ReportController::class, 'subscriptions']);
+    Route::get('reports/export/csv', [ReportController::class, 'exportCsv']);
+    Route::get('reports/export/pdf', [ReportController::class, 'exportPdf']);
+    Route::get('settings/demo-data/stats', [SettingsController::class, 'demoDataStats'])->middleware('role:owner,admin');
+    Route::get('settings/demo_data/stats', [SettingsController::class, 'demoDataStats'])->middleware('role:owner,admin');
+    Route::post('settings/demo-data/clear', [SettingsController::class, 'clearDemoData'])->middleware('role:owner,admin');
+    Route::post('settings/demo_data/clear', [SettingsController::class, 'clearDemoData'])->middleware('role:owner,admin');
+    Route::post('settings/demo-data/generate', [SettingsController::class, 'generateDemoData'])->middleware('role:owner,admin');
+    Route::post('settings/demo_data/generate', [SettingsController::class, 'generateDemoData'])->middleware('role:owner,admin');
     Route::get('settings/{group}', [SettingsController::class, 'show']);
     Route::put('settings/{group}', [SettingsController::class, 'update'])->middleware('role:owner,admin');
-    Route::post('settings/email/test', [SettingsController::class, 'testEmail'])->middleware('role,admin');
+    Route::post('settings/email/test', [SettingsController::class, 'testEmail'])->middleware('role:owner,admin');
     Route::post('company/logo', [SettingsController::class, 'uploadLogo'])->middleware('role:owner,admin');
     Route::get('currencies', [CurrencyController::class, 'index']);
     Route::get('tax-rates', [TaxRateController::class, 'index']);

@@ -119,6 +119,7 @@ class PdfService
         return match ($slug) {
             'professional' => 'pdf.quote.professional',
             'corporate' => 'pdf.quote.corporate',
+            'classic' => 'pdf.quote.classic',
             default => 'pdf.quote.modern',
         };
     }

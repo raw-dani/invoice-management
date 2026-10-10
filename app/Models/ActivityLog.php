@@ -11,10 +11,13 @@ class ActivityLog extends Model
 
     protected $fillable = [
         'company_id', 'user_id', 'subject_type', 'subject_id',
-        'action', 'description', 'properties',
+        'action', 'description', 'properties', 'is_demo',
     ];
 
-    protected $casts = ['properties' => 'array'];
+    protected $casts = [
+        'properties' => 'array',
+        'is_demo' => 'boolean',
+    ];
 
     public function user()
     {

@@ -49,6 +49,8 @@ class ProductController extends Controller
 
     public function store(StoreProductRequest $request): JsonResponse
     {
+        $this->authorize('create', Product::class);
+
         $product = Product::create([
             ...$request->validated(),
             'company_id' => auth()->user()->company_id,
@@ -64,14 +66,14 @@ class ProductController extends Controller
 
     public function show(Product $product): ProductResource
     {
-        $this->authorizeCompany($product);
+        $this->authorize('view', $product);
 
         return new ProductResource($product);
     }
 
     public function update(UpdateProductRequest $request, Product $product): ProductResource
     {
-        $this->authorizeCompany($product);
+        $this->authorize('manage', $product);
 
         $product->update($request->validated());
         ActivityLog::record('product.updated', "Product {$product->name} updated", $product);
@@ -81,7 +83,7 @@ class ProductController extends Controller
 
     public function destroy(Product $product): JsonResponse
     {
-        $this->authorizeCompany($product);
+        $this->authorize('delete', $product);
 
         $product->delete();
         ActivityLog::record('product.deleted', "Product {$product->name} deleted", $product);

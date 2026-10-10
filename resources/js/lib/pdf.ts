@@ -44,10 +44,27 @@ export async function openPdfInNewTab(url: string): Promise<void> {
     window.open(objectUrl, '_blank', 'noopener,noreferrer');
 }
 
+export async function getPdfBlobUrl(url: string): Promise<string> {
+    const token = localStorage.getItem('auth_token');
+
+    const res = await fetch(url, {
+        headers: token ? { Authorization: `Bearer ${token}`, Accept: 'application/pdf' } : {},
+    });
+
+    if (!res.ok) {
+        throw new Error(`Failed to load PDF preview: ${res.status} ${res.statusText}`);
+    }
+
+    const blob = await res.blob();
+    return URL.createObjectURL(blob);
+}
+
 export const pdfUrls = {
     invoice: (id: number) => `/api/invoices/${id}/pdf`,
     quote:   (id: number) => `/api/quotes/${id}/pdf`,
     receipt: (id: number) => `/api/payments/${id}/receipt`,
+    templateInvoicePreview: (slug: string) => `/api/invoice-templates/${slug}/preview`,
+    templateQuotePreview: (slug: string) => `/api/quote-templates/${slug}/preview`,
 };
 
 // Re-export so tsconfig considers this file used

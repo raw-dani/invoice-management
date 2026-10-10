@@ -21,9 +21,19 @@ abstract class CompanyOwnedPolicy
         return $this->sameCompany($user, $model);
     }
 
+    public function create(User $user): bool
+    {
+        return $user->role !== 'viewer';
+    }
+
     public function manage(User $user, $model): bool
     {
         return $this->sameCompany($user, $model) && $user->role !== 'viewer';
+    }
+
+    public function update(User $user, $model): bool
+    {
+        return $this->manage($user, $model);
     }
 
     public function delete(User $user, $model): bool

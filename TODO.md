@@ -152,17 +152,17 @@
 ### PDF Generation
 - [x] Install package PDF (dompdf/spatie)
 - [x] Buat Blade template PDF `pdf.invoice.modern`
-- [ ] Buat Blade template PDF `pdf.invoice.professional`
-- [ ] Buat Blade template PDF `pdf.invoice.classic`
-- [ ] Buat Blade template PDF `pdf.invoice.compact`
+- [x] Buat Blade template PDF `pdf.invoice.professional`
+- [x] Buat Blade template PDF `pdf.invoice.classic`
+- [x] Buat Blade template PDF `pdf.invoice.compact`
 - [x] Endpoint `GET /api/invoices/{id}/pdf?template=modern`
 - [x] Komponen preview PDF (preview dibuka di tab baru)
 - [x] Tombol Download PDF & Print
 
 ### Email Invoice
-- [ ] Implementasi send invoice email (Mail class `InvoiceMail`)
-- [ ] Buat template email invoice (database)
-- [ ] Attach PDF pada email
+- [x] Implementasi send invoice email (Mail class `InvoiceMail`)
+- [x] Buat template email invoice (database)
+- [x] Attach PDF pada email
 - [x] Job `SendInvoiceEmail` (queue)
 - [x] Endpoint `POST /api/invoices/{id}/email`
 - [ ] Konfirmasi dialog "Send Email" di React
@@ -198,13 +198,13 @@
 
 ### Quote PDF
 - [x] Blade template PDF `pdf.quote.modern`
-- [ ] Blade template PDF `pdf.quote.professional`
-- [ ] Blade template PDF `pdf.quote.corporate`
+- [x] Blade template PDF `pdf.quote.professional`
+- [x] Blade template PDF `pdf.quote.corporate`
 - [x] Preview & Download PDF di React
 
 ### Quote Email
-- [ ] Mail class `QuoteMail`
-- [ ] Template email quote
+- [x] Mail class `QuoteMail`
+- [x] Template email quote
 - [x] Job `SendQuoteEmail`
 - [x] Endpoint `POST /api/quotes/{id}/email`
 
@@ -221,7 +221,7 @@
 ### Conversion UI — React
 - [x] Tombol "Convert to Invoice" di `QuoteDetailPage`
 - [x] Redirect ke `InvoiceDetail` setelah konversi berhasil
-- [ ] Modal konfirmasi preview sebelum konversi
+- [x] Modal konfirmasi preview sebelum konversi
 
 ---
 
@@ -374,7 +374,7 @@ Catatan: migration Phase 8 masih pending dan harus dijalankan sebelum `billing:p
 - Catatan: Quote Modern sudah jalan sebagai hardcoded Blade. DB table di-defer.
 
 ### Template Settings — Backend
-- [ ] Upload company logo (`PUT /api/company/logo`)
+- [x] Upload company logo (`PUT /api/company/logo` / `POST /api/company/logo`)
 - [ ] Custom colors per template
 - [ ] Custom footer text
 - [ ] Custom header text
@@ -422,7 +422,7 @@ Catatan: migration Phase 8 masih pending dan harus dijalankan sebelum `billing:p
 - [x] Komponen `OverdueInvoicesTable`
 - [x] Komponen `UpcomingBillingTable`
 - [x] Quick Actions: Create Invoice, Create Quote
-- [ ] Date range filter di header dashboard
+- [x] Date range filter di header dashboard
 - [x] MRR widget
 
 ---
@@ -462,8 +462,8 @@ Catatan: migration Phase 8 masih pending dan harus dijalankan sebelum `billing:p
 - [x] Halaman `Reports` dengan tab (Revenue, Invoice, Customer, Subscription)
 - [x] Date range picker
 - [x] Visualisasi revenue sederhana
-- [ ] Export to PDF
-- [ ] Export to Excel/CSV
+- [x] Export to PDF
+- [x] Export to Excel/CSV
 
 ---
 
@@ -489,7 +489,7 @@ Catatan: migration Phase 8 masih pending dan harus dijalankan sebelum `billing:p
 - [x] Endpoint `GET/POST/PUT/DELETE /api/users`
 - [x] Endpoint `POST /api/users/{id}/assign-role`
 - [x] Halaman `UsersList` & `UserForm`
-- [ ] Halaman profil & ganti password
+- [x] Halaman profil & ganti password
 
 ---
 
@@ -505,9 +505,8 @@ Catatan: migration Phase 8 masih pending dan harus dijalankan sebelum `billing:p
 - [ ] Output Escaping (Blade untuk PDF)
 
 ### Authorization (Policies)
-- [ ] Policy untuk Customer, Product, Invoice, Quote, Payment, Subscription, Settings
-- [ ] Policy didaftarkan di endpoint API
-- Catatan: saat ini pakai `authorizeCompany()` manual di tiap controller — refactor ke Policy
+- [x] Policy untuk Customer, Product, Invoice, Quote, Payment, Subscription, Settings
+- [x] Policy didaftarkan di endpoint API
 
 ### Audit
 - [ ] Login Log (track successful & failed login)
@@ -611,10 +610,10 @@ Catatan: migration Phase 8 masih pending dan harus dijalankan sebelum `billing:p
 ## Phase 20: Production Preparation
 
 ### Performance Optimization
-- [ ] Database indexing tambahan (composite index untuk filter)
+- [x] Database indexing tambahan (composite index untuk filter)
 - [ ] Query optimization (eager loading `with()`, hindari N+1)
 - [ ] Caching strategy (Redis untuk dashboard summary)
-- [ ] Frontend: code splitting, lazy loading route
+- [x] Frontend: code splitting, lazy loading route
 - [ ] Image optimization (logo compression)
 - [ ] CDN untuk asset static
 

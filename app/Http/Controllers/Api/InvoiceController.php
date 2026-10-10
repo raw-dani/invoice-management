@@ -12,6 +12,7 @@ use App\Services\PdfService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpFoundation\Response;
 
 class InvoiceController extends Controller
@@ -50,29 +51,35 @@ class InvoiceController extends Controller
 
     public function store(StoreInvoiceRequest $request): JsonResponse
     {
+        $this->authorize('create', Invoice::class);
+
         $data = $request->validated();
 
-        $invoice = Invoice::create([
-            'company_id'      => auth()->user()->company_id,
-            'customer_id'     => $data['customer_id'],
-            'invoice_number'  => Invoice::generateInvoiceNumber(auth()->user()->company_id),
-            'invoice_date'    => $data['invoice_date'],
-            'due_date'        => $data['due_date'],
-            'currency'        => $data['currency'],
-            'discount'        => $data['discount'] ?? 0,
-            'discount_type'   => $data['discount_type'],
-            'tax_rate'        => $data['tax_rate'] ?? 0,
-            'notes'           => $data['notes'] ?? null,
-            'terms'           => $data['terms'] ?? null,
-            'status'          => 'draft',
-        ]);
+        $invoice = DB::transaction(function () use ($data) {
+            $invoice = Invoice::create([
+                'company_id'      => auth()->user()->company_id,
+                'customer_id'     => $data['customer_id'],
+                'invoice_number'  => Invoice::generateInvoiceNumber(auth()->user()->company_id),
+                'invoice_date'    => $data['invoice_date'],
+                'due_date'        => $data['due_date'],
+                'currency'        => $data['currency'],
+                'discount'        => $data['discount'] ?? 0,
+                'discount_type'   => $data['discount_type'],
+                'tax_rate'        => $data['tax_rate'] ?? 0,
+                'notes'           => $data['notes'] ?? null,
+                'terms'           => $data['terms'] ?? null,
+                'status'          => 'draft',
+            ]);
 
-        foreach ($data['items'] as $item) {
-            $invoice->items()->create($item);
-        }
+            foreach ($data['items'] as $item) {
+                $invoice->items()->create($item);
+            }
 
-        $invoice->load('items');
-        $invoice->calculateTotals();
+            $invoice->load('items');
+            $invoice->calculateTotals();
+
+            return $invoice;
+        });
 
         return (new InvoiceResource($invoice->load('customer', 'items.product')))
             ->response()
@@ -81,7 +88,7 @@ class InvoiceController extends Controller
 
     public function show(Invoice $invoice): InvoiceResource
     {
-        $this->authorizeCompany($invoice);
+        $this->authorize('view', $invoice);
 
         return new InvoiceResource(
             $invoice->load('customer', 'items.product', 'payments')
@@ -90,7 +97,7 @@ class InvoiceController extends Controller
 
     public function update(UpdateInvoiceRequest $request, Invoice $invoice): InvoiceResource
     {
-        $this->authorizeCompany($invoice);
+        $this->authorize('manage', $invoice);
 
         if ($invoice->status !== 'draft') {
             abort(422, 'Only draft invoices can be edited.');
@@ -98,21 +105,23 @@ class InvoiceController extends Controller
 
         $data = $request->validated();
 
-        $invoice->update(collect($data)->except('items')->toArray());
-        $invoice->items()->delete();
-        foreach ($data['items'] as $item) {
-            $invoice->items()->create($item);
-        }
+        DB::transaction(function () use ($invoice, $data) {
+            $invoice->update(collect($data)->except('items')->toArray());
+            $invoice->items()->delete();
+            foreach ($data['items'] as $item) {
+                $invoice->items()->create($item);
+            }
 
-        $invoice->refresh()->load('items');
-        $invoice->calculateTotals();
+            $invoice->refresh()->load('items');
+            $invoice->calculateTotals();
+        });
 
         return new InvoiceResource($invoice->load('customer', 'items.product'));
     }
 
     public function destroy(Invoice $invoice): JsonResponse
     {
-        $this->authorizeCompany($invoice);
+        $this->authorize('delete', $invoice);
 
         if (!in_array($invoice->status, ['draft', 'cancelled'], true)) {
             abort(422, 'Only draft or cancelled invoices can be deleted.');
@@ -126,7 +135,7 @@ class InvoiceController extends Controller
 
     public function duplicate(Invoice $invoice): JsonResponse
     {
-        $this->authorizeCompany($invoice);
+        $this->authorize('manage', $invoice);
         $invoice->load('items');
 
         $duplicate = \Illuminate\Support\Facades\DB::transaction(function () use ($invoice): Invoice {
@@ -150,7 +159,7 @@ class InvoiceController extends Controller
 
     public function markAsSent(Invoice $invoice): InvoiceResource
     {
-        $this->authorizeCompany($invoice);
+        $this->authorize('manage', $invoice);
 
         if ($invoice->status !== 'draft') {
             abort(422, 'Only draft invoices can be marked as sent.');
@@ -164,7 +173,7 @@ class InvoiceController extends Controller
 
     public function void(Invoice $invoice): InvoiceResource
     {
-        $this->authorizeCompany($invoice);
+        $this->authorize('manage', $invoice);
 
         if (in_array($invoice->status, ['paid', 'void'], true)) {
             abort(422, 'Paid or void invoices cannot be voided.');
@@ -178,7 +187,7 @@ class InvoiceController extends Controller
 
     public function pdf(Invoice $invoice, PdfService $pdf): Response
     {
-        $this->authorizeCompany($invoice);
+        $this->authorize('view', $invoice);
         $invoice->load('customer', 'items.product');
 
         $pdfContent = $pdf->renderInvoice($invoice, request()->query('template'));

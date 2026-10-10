@@ -68,19 +68,37 @@ class ReportController extends Controller
     public function subscriptions(): JsonResponse
     {
         $companyId = auth()->user()->company_id;
-        $subscriptions = Subscription::with('items')->where('company_id', $companyId)->get();
-        $mrr = round($subscriptions->where('status', 'active')->sum(fn ($subscription) => $this->monthlyAmount($subscription)), 2);
 
-        return response()->json(['data' => [
-            'active' => $subscriptions->where('status', 'active')->count(),
-            'paused' => $subscriptions->where('status', 'paused')->count(),
-            'cancelled' => $subscriptions->where('status', 'cancelled')->count(),
-            'mrr' => $mrr,
-            'upcoming' => $subscriptions->where('status', 'active')->where('next_billing_date', '>=', today())->sortBy('next_billing_date')->take(10)->values()->map(fn ($subscription) => [
+        $counts = Subscription::where('company_id', $companyId)
+            ->select('status', DB::raw('count(*) as count'))
+            ->groupBy('status')
+            ->pluck('count', 'status');
+
+        $activeSubscriptions = Subscription::with('items')
+            ->where('company_id', $companyId)
+            ->where('status', 'active')
+            ->get();
+
+        $mrr = round($activeSubscriptions->sum(fn ($subscription) => $this->monthlyAmount($subscription)), 2);
+
+        $upcoming = Subscription::where('company_id', $companyId)
+            ->where('status', 'active')
+            ->where('next_billing_date', '>=', today())
+            ->orderBy('next_billing_date')
+            ->limit(10)
+            ->get(['subscription_number', 'next_billing_date', 'billing_cycle'])
+            ->map(fn ($subscription) => [
                 'subscription_number' => $subscription->subscription_number,
                 'next_billing_date' => $subscription->next_billing_date?->toDateString(),
                 'billing_cycle' => $subscription->billing_cycle,
-            ]),
+            ]);
+
+        return response()->json(['data' => [
+            'active' => $counts['active'] ?? 0,
+            'paused' => $counts['paused'] ?? 0,
+            'cancelled' => $counts['cancelled'] ?? 0,
+            'mrr' => $mrr,
+            'upcoming' => $upcoming,
         ]]);
     }
 
@@ -108,5 +126,107 @@ class ReportController extends Controller
             'yearly' => $amount / 12,
             default => $amount,
         };
+    }
+
+    public function exportCsv(Request $request)
+    {
+        $type = $request->input('type', 'revenue');
+        [$from, $to] = $this->dateRange($request);
+
+        $callback = function () use ($type, $request) {
+            $handle = fopen('php://output', 'w');
+
+            if ($type === 'revenue') {
+                fputcsv($handle, ['Category/Period', 'Revenue (IDR)', 'Quantity']);
+                $data = $this->revenue($request)->getData(true)['data']['rows'];
+                foreach ($data as $row) {
+                    fputcsv($handle, [
+                        $row['label'] ?? '',
+                        $row['revenue'] ?? 0,
+                        $row['quantity'] ?? '',
+                    ]);
+                }
+            } elseif ($type === 'invoices') {
+                fputcsv($handle, ['Status', 'Count', 'Total (IDR)', 'Balance (IDR)']);
+                $data = $this->invoices($request)->getData(true)['data']['rows'];
+                foreach ($data as $row) {
+                    fputcsv($handle, [
+                        $row['status'] ?? '',
+                        $row['count'] ?? 0,
+                        $row['total'] ?? 0,
+                        $row['balance'] ?? 0,
+                    ]);
+                }
+            } elseif ($type === 'customers') {
+                fputcsv($handle, ['Customer Name', 'Outstanding Balance (IDR)']);
+                $data = $this->customers($request)->getData(true)['data']['balances'];
+                foreach ($data as $row) {
+                    fputcsv($handle, [
+                        $row['customer'] ?? '',
+                        $row['balance'] ?? 0,
+                    ]);
+                }
+            } elseif ($type === 'subscriptions') {
+                fputcsv($handle, ['Subscription Number', 'Billing Cycle', 'Next Billing Date']);
+                $data = $this->subscriptions()->getData(true)['data']['upcoming'];
+                foreach ($data as $row) {
+                    fputcsv($handle, [
+                        $row['subscription_number'] ?? '',
+                        $row['billing_cycle'] ?? '',
+                        $row['next_billing_date'] ?? '',
+                    ]);
+                }
+            }
+
+            fclose($handle);
+        };
+
+        $filename = "report-{$type}-{$from->toDateString()}-to-{$to->toDateString()}.csv";
+
+        return response()->stream($callback, 200, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
+    }
+
+    public function exportPdf(Request $request)
+    {
+        $type = $request->input('type', 'revenue');
+        [$from, $to] = $this->dateRange($request);
+        $company = auth()->user()->company ?? new \App\Models\Company(['name' => 'Company']);
+
+        $viewData = [
+            'type' => $type,
+            'from' => $from->toDateString(),
+            'to' => $to->toDateString(),
+            'company' => $company,
+        ];
+
+        if ($type === 'revenue') {
+            $viewData['rows'] = $this->revenue($request)->getData(true)['data']['rows'];
+        } elseif ($type === 'invoices') {
+            $viewData['rows'] = $this->invoices($request)->getData(true)['data']['rows'];
+        } elseif ($type === 'customers') {
+            $cData = $this->customers($request)->getData(true)['data'];
+            $viewData['statusRows'] = $cData['status'];
+            $viewData['balances'] = $cData['balances'];
+        } elseif ($type === 'subscriptions') {
+            $viewData['data'] = $this->subscriptions()->getData(true)['data'];
+        }
+
+        $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.report.summary', $viewData)
+            ->setPaper('a4', 'portrait')
+            ->setOptions([
+                'isHtml5ParserEnabled' => true,
+                'isRemoteEnabled' => true,
+                'defaultFont' => 'sans-serif',
+            ]);
+
+        $filename = "report-{$type}-{$from->toDateString()}-to-{$to->toDateString()}.pdf";
+
+        return response()->make($pdf->output(), 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => "attachment; filename=\"{$filename}\"",
+        ]);
     }
 }

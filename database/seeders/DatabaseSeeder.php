@@ -12,5 +12,7 @@ class DatabaseSeeder extends Seeder
         $this->call(TemplateSeeder::class);
         $this->call(CurrencySeeder::class);
         $this->call(TaxRateSeeder::class);
+        $this->call(CompanyAndUserSeeder::class);
+        $this->call(DemoDataSeeder::class);
     }
 }

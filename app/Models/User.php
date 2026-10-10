@@ -23,6 +23,7 @@ class User extends Authenticatable
         'password',
         'company_id',
         'role',
+        'is_demo',
     ];
 
     /**
@@ -43,6 +44,7 @@ class User extends Authenticatable
     protected $casts = [
         'email_verified_at' => 'datetime',
         'password' => 'hashed',
+        'is_demo' => 'boolean',
     ];
 
     /**

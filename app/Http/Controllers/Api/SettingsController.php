@@ -21,6 +21,10 @@ class SettingsController extends Controller
 
     public function show(string $group): JsonResponse
     {
+        if (in_array($group, ['demo_data', 'demo-data'])) {
+            return $this->demoDataStats(app(\App\Services\DemoDataService::class));
+        }
+
         $this->validateGroup($group);
         $companyId = auth()->user()->company_id;
 
@@ -38,6 +42,10 @@ class SettingsController extends Controller
 
     public function update(Request $request, string $group): JsonResponse
     {
+        if (in_array($group, ['demo_data', 'demo-data'])) {
+            return response()->json(['message' => 'Demo data settings cannot be updated via PUT.']);
+        }
+
         $this->validateGroup($group);
         $companyId = auth()->user()->company_id;
 
@@ -95,6 +103,47 @@ class SettingsController extends Controller
             'data' => ['logo' => asset('storage/' . $path)],
             'message' => 'Logo uploaded successfully.',
         ]);
+    }
+
+    public function demoDataStats(\App\Services\DemoDataService $service): JsonResponse
+    {
+        $this->ensureAdminUser();
+        $company = Company::findOrFail(auth()->user()->company_id);
+
+        return response()->json([
+            'data' => $service->stats($company),
+        ]);
+    }
+
+    public function generateDemoData(\App\Services\DemoDataService $service): JsonResponse
+    {
+        $this->ensureAdminUser();
+        $company = Company::findOrFail(auth()->user()->company_id);
+
+        $stats = $service->generate($company, auth()->user());
+
+        return response()->json([
+            'message' => 'Data demo berhasil dimuat lengkap.',
+            'data' => $stats,
+        ]);
+    }
+
+    public function clearDemoData(\App\Services\DemoDataService $service): JsonResponse
+    {
+        $this->ensureAdminUser();
+        $company = Company::findOrFail(auth()->user()->company_id);
+
+        $deleted = $service->clear($company);
+
+        return response()->json([
+            'message' => 'Data demo berhasil dihapus dari sistem.',
+            'deleted' => $deleted,
+        ]);
+    }
+
+    private function ensureAdminUser(): void
+    {
+        abort_unless(in_array(auth()->user()->role, ['owner', 'admin']), 403, 'Hanya admin yang memiliki izin untuk mengelola atau menghapus data demo.');
     }
 
     private function validateGroup(string $group): void

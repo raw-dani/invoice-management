@@ -79,6 +79,7 @@ class SendInvoiceEmail implements ShouldQueue
                 'invoice_id' => $invoice->id,
                 'error' => $e->getMessage(),
             ]);
+            throw $e;
         }
     }
 }

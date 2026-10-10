@@ -21,11 +21,13 @@ class Product extends Model
         'billing_cycle',
         'status',
         'notes',
+        'is_demo',
     ];
 
     protected $casts = [
         'price' => 'decimal:2',
         'tax_rate' => 'decimal:2',
+        'is_demo' => 'boolean',
     ];
 
     /**

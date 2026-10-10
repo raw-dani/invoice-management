@@ -148,6 +148,8 @@ php artisan serve --host=127.0.0.1 --port=8000
 php artisan route:list
 php artisan schedule:list
 php artisan billing:process --date=2026-09-06
+php artisan demo:seed       # Muat data demo lengkap untuk presentasi klien
+php artisan demo:clear      # Hapus seluruh data demo (khusus data demo bertanda is_demo)
 php artisan queue:work
 php artisan optimize:clear
 php artisan test
