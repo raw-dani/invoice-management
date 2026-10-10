@@ -43,6 +43,9 @@ Route::prefix('public')->group(function () {
     Route::get('quotes/{token}/pdf', [PublicPortalController::class, 'downloadQuotePdf']);
 });
 
+// Payment Gateway Webhooks (Midtrans, Xendit, Doku, Duitku)
+Route::post('webhooks/payment/{gateway}', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'handle']);
+
 // Public auth
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/auth/login',    [AuthController::class, 'login'])->middleware('throttle:auth');

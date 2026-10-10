@@ -13,7 +13,7 @@ const GROUPS: Array<{ key: SettingsGroup; label: string }> = [
     { key: 'invoice', label: 'Invoice' },
     { key: 'quote', label: 'Quote' },
     { key: 'email', label: 'Email' },
-    { key: 'payment', label: 'Payment' },
+    { key: 'payment', label: 'Payment & Gateway' },
 ];
 
 export default function SettingsPage() {
@@ -705,21 +705,607 @@ function GroupFields({
         );
     if (group === 'email')
         return <EmailFields values={values} update={update} isDemo={isDemo} />;
+    return <PaymentSettingsFields values={values} update={update} isDemo={isDemo} />;
+}
+
+function PaymentSettingsFields({
+    values,
+    update,
+    isDemo,
+}: {
+    values: Record<string, any>;
+    update: (key: string, value: any) => void;
+    isDemo?: boolean;
+}) {
+    const [activeTab, setActiveTab] = useState<'manual' | 'midtrans' | 'xendit' | 'doku' | 'duitku'>('manual');
+    const [showKey, setShowKey] = useState<Record<string, boolean>>({});
+
+    const toggleKeyVisibility = (gateway: string) => {
+        setShowKey((prev) => ({ ...prev, [gateway]: !prev[gateway] }));
+    };
+
+    const copyWebhookUrl = (gateway: string) => {
+        const url = `${window.location.origin}/api/webhooks/payment/${gateway}`;
+        navigator.clipboard.writeText(url);
+        toast.success(`URL Webhook ${gateway.toUpperCase()} berhasil disalin!`);
+    };
+
+    const gateways = [
+        { id: 'manual', name: 'Transfer Bank Manual', icon: '🏦', enabled: true },
+        { id: 'midtrans', name: 'Midtrans Snap', icon: '💳', enabled: values.midtrans_enabled === '1' },
+        { id: 'xendit', name: 'Xendit Invoice', icon: '⚡', enabled: values.xendit_enabled === '1' },
+        { id: 'doku', name: 'DOKU Checkout', icon: '🔴', enabled: values.doku_enabled === '1' },
+        { id: 'duitku', name: 'Duitku Gateway', icon: '🟢', enabled: values.duitku_enabled === '1' },
+    ];
+
     return (
-        <>
-            <Field label="Bank name">
-                <Input disabled={isDemo} value={values.bank_name ?? ''} onChange={(e) => update('bank_name', e.target.value)} />
-            </Field>
-            <Field label="Account name">
-                <Input disabled={isDemo} value={values.account_name ?? ''} onChange={(e) => update('account_name', e.target.value)} />
-            </Field>
-            <Field label="Account number">
-                <Input disabled={isDemo} value={values.account_number ?? ''} onChange={(e) => update('account_number', e.target.value)} />
-            </Field>
-            <Field label="Payment instructions">
-                <Textarea disabled={isDemo} value={values.instructions ?? ''} onChange={(e) => update('instructions', e.target.value)} />
-            </Field>
-        </>
+        <div className="space-y-6">
+            {/* Header / Active Gateway Selector */}
+            <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-gray-200 pb-3">
+                    <div>
+                        <h3 className="text-sm font-semibold text-gray-900">Integrasi Pembayaran & Payment Gateway</h3>
+                        <p className="text-xs text-gray-500">
+                            Atur rekening transfer manual atau sambungkan payment gateway otomatis (Midtrans, Xendit, DOKU, Duitku).
+                        </p>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Field label="Metode Pembayaran Utama Pelanggan">
+                        <Select
+                            disabled={isDemo}
+                            value={values.active_gateway ?? 'manual'}
+                            onChange={(e) => update('active_gateway', e.target.value)}
+                        >
+                            <option value="manual">🏦 Transfer Bank Manual (Default)</option>
+                            <option value="midtrans">💳 Midtrans (Snap / QRIS / VA / E-Wallet)</option>
+                            <option value="xendit">⚡ Xendit (Invoice & Payment Link)</option>
+                            <option value="doku">🔴 DOKU Checkout</option>
+                            <option value="duitku">🟢 Duitku Payment Gateway</option>
+                        </Select>
+                    </Field>
+                    <div className="flex flex-col justify-end">
+                        <div className="text-xs text-gray-500 mb-1.5 font-medium">Status Gateway Terkoneksi:</div>
+                        <div className="flex flex-wrap items-center gap-1.5">
+                            {gateways.map((g) => (
+                                <span
+                                    key={g.id}
+                                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                                        g.enabled
+                                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                            : 'bg-gray-100 text-gray-500 border border-gray-200'
+                                    }`}
+                                >
+                                    {g.icon} {g.name.split(' ')[0]}: {g.enabled ? 'Aktif' : 'Off'}
+                                </span>
+                            ))}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Sub-Tab Navigation */}
+            <div className="flex border-b border-gray-200 space-x-1 overflow-x-auto pb-1">
+                {gateways.map((g) => (
+                    <button
+                        key={g.id}
+                        type="button"
+                        onClick={() => setActiveTab(g.id as any)}
+                        className={`flex items-center gap-2 px-3.5 py-2 text-xs font-medium rounded-t-lg border-b-2 whitespace-nowrap transition ${
+                            activeTab === g.id
+                                ? 'border-indigo-600 text-indigo-600 bg-indigo-50/50'
+                                : 'border-transparent text-gray-600 hover:text-gray-900 hover:border-gray-300'
+                        }`}
+                    >
+                        <span>{g.icon}</span>
+                        <span>{g.name}</span>
+                        {g.enabled && g.id !== 'manual' && (
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
+            {/* Content for Manual Bank Transfer */}
+            {activeTab === 'manual' && (
+                <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                    <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                        <span className="text-sm font-semibold text-gray-900">Rekening Transfer Bank Manual</span>
+                        <span className="text-xs text-gray-500">(Akan tercantum pada lembar tagihan / invoice klien)</span>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Field label="Nama Bank">
+                            <Input
+                                disabled={isDemo}
+                                value={values.bank_name ?? ''}
+                                onChange={(e) => update('bank_name', e.target.value)}
+                                placeholder="BCA / Mandiri / BNI / BRI"
+                            />
+                        </Field>
+                        <Field label="Atas Nama (Account Holder)">
+                            <Input
+                                disabled={isDemo}
+                                value={values.account_name ?? ''}
+                                onChange={(e) => update('account_name', e.target.value)}
+                                placeholder="PT Solusi Hebat"
+                            />
+                        </Field>
+                        <Field label="Nomor Rekening">
+                            <Input
+                                disabled={isDemo}
+                                value={values.account_number ?? ''}
+                                onChange={(e) => update('account_number', e.target.value)}
+                                placeholder="1234567890"
+                            />
+                        </Field>
+                    </div>
+                    <Field label="Petunjuk Pembayaran (Payment Instructions)">
+                        <Textarea
+                            disabled={isDemo}
+                            value={values.instructions ?? ''}
+                            onChange={(e) => update('instructions', e.target.value)}
+                            placeholder="Harap sertakan nomor invoice pada berita transfer. Unggah bukti transfer di portal klien untuk verifikasi otomatis."
+                            rows={3}
+                        />
+                    </Field>
+                </div>
+            )}
+
+            {/* Content for Midtrans */}
+            {activeTab === 'midtrans' && (
+                <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">💳</span>
+                            <span className="text-sm font-semibold text-gray-900">Konfigurasi Midtrans (Snap / QRIS / VA)</span>
+                        </div>
+                        <a
+                            href="https://dashboard.midtrans.com"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-indigo-600 hover:underline"
+                        >
+                            Buka Dashboard Midtrans ↗
+                        </a>
+                    </div>
+
+                    <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
+                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <div>
+                            <span className="font-semibold text-blue-950">Panduan Integrasi Midtrans: </span>
+                            Dapatkan <strong>Client Key</strong> dan <strong>Server Key</strong> dari dashboard Midtrans menu <em>Settings &gt; Access Keys</em>.
+                            Gunakan mode <strong>Sandbox</strong> untuk uji coba dan beralih ke <strong>Production</strong> saat siap menerima pembayaran asli.
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Status Integrasi Midtrans">
+                            <Select
+                                disabled={isDemo}
+                                value={values.midtrans_enabled ?? '0'}
+                                onChange={(e) => update('midtrans_enabled', e.target.value)}
+                            >
+                                <option value="0">Nonaktif (Disabled)</option>
+                                <option value="1">Aktif (Enabled)</option>
+                            </Select>
+                        </Field>
+                        <Field label="Environment Mode">
+                            <Select
+                                disabled={isDemo}
+                                value={values.midtrans_mode ?? 'sandbox'}
+                                onChange={(e) => update('midtrans_mode', e.target.value)}
+                            >
+                                <option value="sandbox">Sandbox (Testing / Uji Coba)</option>
+                                <option value="production">Production (Live / Transaksi Asli)</option>
+                            </Select>
+                        </Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <Field label="Merchant ID">
+                            <Input
+                                disabled={isDemo}
+                                value={values.midtrans_merchant_id ?? ''}
+                                onChange={(e) => update('midtrans_merchant_id', e.target.value)}
+                                placeholder="G123456789"
+                            />
+                        </Field>
+                        <Field label="Client Key">
+                            <Input
+                                disabled={isDemo}
+                                value={values.midtrans_client_key ?? ''}
+                                onChange={(e) => update('midtrans_client_key', e.target.value)}
+                                placeholder="SB-Mid-client-..."
+                            />
+                        </Field>
+                        <div>
+                            <label className="block space-y-1">
+                                <span className="block text-sm font-medium text-gray-700">Server Key</span>
+                                <div className="relative">
+                                    <Input
+                                        disabled={isDemo}
+                                        type={showKey.midtrans ? 'text' : 'password'}
+                                        value={values.midtrans_server_key ?? ''}
+                                        onChange={(e) => update('midtrans_server_key', e.target.value)}
+                                        placeholder="SB-Mid-server-..."
+                                        className="pr-16"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleKeyVisibility('midtrans')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded font-medium transition"
+                                        tabIndex={-1}
+                                    >
+                                        {showKey.midtrans ? 'Tutup' : 'Lihat'}
+                                    </button>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Webhook URL Helper */}
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 space-y-1.5">
+                        <div className="text-xs font-semibold text-gray-700">Payment Notification / Webhook URL:</div>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                readOnly
+                                value={`${window.location.origin}/api/webhooks/payment/midtrans`}
+                                className="bg-gray-50 text-xs font-mono"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => copyWebhookUrl('midtrans')}
+                                className="whitespace-nowrap"
+                            >
+                                Salin URL
+                            </Button>
+                        </div>
+                        <p className="text-[11px] text-gray-500">
+                            Masukkan URL ini di dashboard Midtrans menu <em>Settings &gt; Configuration &gt; Payment Notification URL</em>.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Content for Xendit */}
+            {activeTab === 'xendit' && (
+                <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">⚡</span>
+                            <span className="text-sm font-semibold text-gray-900">Konfigurasi Xendit (Invoice & Payment Link)</span>
+                        </div>
+                        <a
+                            href="https://dashboard.xendit.co"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-indigo-600 hover:underline"
+                        >
+                            Buka Dashboard Xendit ↗
+                        </a>
+                    </div>
+
+                    <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
+                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <div>
+                            <span className="font-semibold text-blue-950">Panduan Integrasi Xendit: </span>
+                            Dapatkan <strong>Secret API Key</strong> di dashboard Xendit menu <em>Settings &gt; API Keys &gt; Generate Secret Key</em>.
+                            Pastikan memberi izin tulis (Write) untuk Invoice.
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Status Integrasi Xendit">
+                            <Select
+                                disabled={isDemo}
+                                value={values.xendit_enabled ?? '0'}
+                                onChange={(e) => update('xendit_enabled', e.target.value)}
+                            >
+                                <option value="0">Nonaktif (Disabled)</option>
+                                <option value="1">Aktif (Enabled)</option>
+                            </Select>
+                        </Field>
+                        <Field label="Environment Mode">
+                            <Select
+                                disabled={isDemo}
+                                value={values.xendit_mode ?? 'sandbox'}
+                                onChange={(e) => update('xendit_mode', e.target.value)}
+                            >
+                                <option value="sandbox">Development / Sandbox</option>
+                                <option value="production">Production (Live)</option>
+                            </Select>
+                        </Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label className="block space-y-1">
+                                <span className="block text-sm font-medium text-gray-700">Secret API Key</span>
+                                <div className="relative">
+                                    <Input
+                                        disabled={isDemo}
+                                        type={showKey.xendit ? 'text' : 'password'}
+                                        value={values.xendit_secret_key ?? ''}
+                                        onChange={(e) => update('xendit_secret_key', e.target.value)}
+                                        placeholder="xnd_development_..."
+                                        className="pr-16"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleKeyVisibility('xendit')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded font-medium transition"
+                                        tabIndex={-1}
+                                    >
+                                        {showKey.xendit ? 'Tutup' : 'Lihat'}
+                                    </button>
+                                </div>
+                            </label>
+                        </div>
+                        <Field label="Public Key (Opsional)">
+                            <Input
+                                disabled={isDemo}
+                                value={values.xendit_public_key ?? ''}
+                                onChange={(e) => update('xendit_public_key', e.target.value)}
+                                placeholder="xnd_public_development_..."
+                            />
+                        </Field>
+                        <Field label="Webhook Verification Token (Opsional)">
+                            <Input
+                                disabled={isDemo}
+                                value={values.xendit_webhook_token ?? ''}
+                                onChange={(e) => update('xendit_webhook_token', e.target.value)}
+                                placeholder="Token verifikasi webhook"
+                            />
+                        </Field>
+                    </div>
+
+                    {/* Webhook URL Helper */}
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 space-y-1.5">
+                        <div className="text-xs font-semibold text-gray-700">Webhook / Callback URL:</div>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                readOnly
+                                value={`${window.location.origin}/api/webhooks/payment/xendit`}
+                                className="bg-gray-50 text-xs font-mono"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => copyWebhookUrl('xendit')}
+                                className="whitespace-nowrap"
+                            >
+                                Salin URL
+                            </Button>
+                        </div>
+                        <p className="text-[11px] text-gray-500">
+                            Masukkan URL ini di dashboard Xendit menu <em>Settings &gt; Callbacks &gt; Invoices Paid</em>.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Content for DOKU */}
+            {activeTab === 'doku' && (
+                <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">🔴</span>
+                            <span className="text-sm font-semibold text-gray-900">Konfigurasi DOKU Checkout</span>
+                        </div>
+                        <a
+                            href="https://dashboard.doku.com"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-indigo-600 hover:underline"
+                        >
+                            Buka Back Office DOKU ↗
+                        </a>
+                    </div>
+
+                    <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
+                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <div>
+                            <span className="font-semibold text-blue-950">Panduan Integrasi DOKU: </span>
+                            Dapatkan <strong>Client ID (Mall ID)</strong> dan <strong>Secret Key (Shared Key)</strong> dari portal DOKU Back Office menu <em>Integration &gt; API Credentials</em>.
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Status Integrasi DOKU">
+                            <Select
+                                disabled={isDemo}
+                                value={values.doku_enabled ?? '0'}
+                                onChange={(e) => update('doku_enabled', e.target.value)}
+                            >
+                                <option value="0">Nonaktif (Disabled)</option>
+                                <option value="1">Aktif (Enabled)</option>
+                            </Select>
+                        </Field>
+                        <Field label="Environment Mode">
+                            <Select
+                                disabled={isDemo}
+                                value={values.doku_mode ?? 'sandbox'}
+                                onChange={(e) => update('doku_mode', e.target.value)}
+                            >
+                                <option value="sandbox">Sandbox (Testing)</option>
+                                <option value="production">Production (Live)</option>
+                            </Select>
+                        </Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Client ID (Mall ID)">
+                            <Input
+                                disabled={isDemo}
+                                value={values.doku_client_id ?? ''}
+                                onChange={(e) => update('doku_client_id', e.target.value)}
+                                placeholder="MALLID_12345"
+                            />
+                        </Field>
+                        <div>
+                            <label className="block space-y-1">
+                                <span className="block text-sm font-medium text-gray-700">Secret Key (Shared Key)</span>
+                                <div className="relative">
+                                    <Input
+                                        disabled={isDemo}
+                                        type={showKey.doku ? 'text' : 'password'}
+                                        value={values.doku_secret_key ?? ''}
+                                        onChange={(e) => update('doku_secret_key', e.target.value)}
+                                        placeholder="SK_123456789..."
+                                        className="pr-16"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleKeyVisibility('doku')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded font-medium transition"
+                                        tabIndex={-1}
+                                    >
+                                        {showKey.doku ? 'Tutup' : 'Lihat'}
+                                    </button>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Webhook URL Helper */}
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 space-y-1.5">
+                        <div className="text-xs font-semibold text-gray-700">Notification / Webhook URL:</div>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                readOnly
+                                value={`${window.location.origin}/api/webhooks/payment/doku`}
+                                className="bg-gray-50 text-xs font-mono"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => copyWebhookUrl('doku')}
+                                className="whitespace-nowrap"
+                            >
+                                Salin URL
+                            </Button>
+                        </div>
+                        <p className="text-[11px] text-gray-500">
+                            Masukkan URL ini di DOKU Back Office menu <em>Configuration &gt; Notification URL</em>.
+                        </p>
+                    </div>
+                </div>
+            )}
+
+            {/* Content for Duitku */}
+            {activeTab === 'duitku' && (
+                <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                    <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                        <div className="flex items-center gap-2">
+                            <span className="text-base">🟢</span>
+                            <span className="text-sm font-semibold text-gray-900">Konfigurasi Duitku Payment Gateway</span>
+                        </div>
+                        <a
+                            href="https://passport.duitku.com"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs text-indigo-600 hover:underline"
+                        >
+                            Buka Dashboard Duitku ↗
+                        </a>
+                    </div>
+
+                    <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
+                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <div>
+                            <span className="font-semibold text-blue-950">Panduan Integrasi Duitku: </span>
+                            Dapatkan <strong>Merchant Code</strong> dan <strong>API Key</strong> dari dashboard Duitku menu <em>Project Settings</em>.
+                        </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Status Integrasi Duitku">
+                            <Select
+                                disabled={isDemo}
+                                value={values.duitku_enabled ?? '0'}
+                                onChange={(e) => update('duitku_enabled', e.target.value)}
+                            >
+                                <option value="0">Nonaktif (Disabled)</option>
+                                <option value="1">Aktif (Enabled)</option>
+                            </Select>
+                        </Field>
+                        <Field label="Environment Mode">
+                            <Select
+                                disabled={isDemo}
+                                value={values.duitku_mode ?? 'sandbox'}
+                                onChange={(e) => update('duitku_mode', e.target.value)}
+                            >
+                                <option value="sandbox">Sandbox (Testing)</option>
+                                <option value="production">Production (Live)</option>
+                            </Select>
+                        </Field>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <Field label="Merchant Code">
+                            <Input
+                                disabled={isDemo}
+                                value={values.duitku_merchant_code ?? ''}
+                                onChange={(e) => update('duitku_merchant_code', e.target.value)}
+                                placeholder="D12345"
+                            />
+                        </Field>
+                        <div>
+                            <label className="block space-y-1">
+                                <span className="block text-sm font-medium text-gray-700">API Key / Merchant Key</span>
+                                <div className="relative">
+                                    <Input
+                                        disabled={isDemo}
+                                        type={showKey.duitku ? 'text' : 'password'}
+                                        value={values.duitku_api_key ?? ''}
+                                        onChange={(e) => update('duitku_api_key', e.target.value)}
+                                        placeholder="Key_1234567890..."
+                                        className="pr-16"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => toggleKeyVisibility('duitku')}
+                                        className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded font-medium transition"
+                                        tabIndex={-1}
+                                    >
+                                        {showKey.duitku ? 'Tutup' : 'Lihat'}
+                                    </button>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    {/* Webhook URL Helper */}
+                    <div className="bg-white p-3 rounded-lg border border-gray-200 space-y-1.5">
+                        <div className="text-xs font-semibold text-gray-700">Callback / Notification URL:</div>
+                        <div className="flex items-center gap-2">
+                            <Input
+                                readOnly
+                                value={`${window.location.origin}/api/webhooks/payment/duitku`}
+                                className="bg-gray-50 text-xs font-mono"
+                            />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                onClick={() => copyWebhookUrl('duitku')}
+                                className="whitespace-nowrap"
+                            >
+                                Salin URL
+                            </Button>
+                        </div>
+                        <p className="text-[11px] text-gray-500">
+                            Masukkan URL ini di dashboard Duitku menu <em>Project &gt; Callback URL</em>.
+                        </p>
+                    </div>
+                </div>
+            )}
+        </div>
     );
 }
 

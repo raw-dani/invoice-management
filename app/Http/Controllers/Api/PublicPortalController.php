@@ -63,10 +63,17 @@ class PublicPortalController extends Controller
 
         ActivityLog::record('invoice.viewed', "Invoice {$invoice->invoice_number} dilihat oleh klien di portal", $invoice);
 
-        // Bank settings
-        $bankKeys = ['bank_name', 'account_name', 'account_number', 'instructions'];
-        $bankSettings = Setting::where('company_id', $invoice->company_id)
-            ->whereIn('key', $bankKeys)
+        // Payment and bank settings
+        $paymentKeys = [
+            'bank_name', 'account_name', 'account_number', 'instructions',
+            'active_gateway',
+            'midtrans_enabled', 'midtrans_mode', 'midtrans_client_key',
+            'xendit_enabled', 'xendit_mode',
+            'doku_enabled', 'doku_mode',
+            'duitku_enabled', 'duitku_mode',
+        ];
+        $paymentSettings = Setting::where('company_id', $invoice->company_id)
+            ->whereIn('key', $paymentKeys)
             ->pluck('value', 'key');
 
         $companyData = $invoice->company ? [
@@ -83,10 +90,30 @@ class PublicPortalController extends Controller
             'invoice' => new InvoiceResource($invoice),
             'company' => $companyData,
             'bank' => [
-                'bank_name' => $bankSettings['bank_name'] ?? null,
-                'account_name' => $bankSettings['account_name'] ?? null,
-                'account_number' => $bankSettings['account_number'] ?? null,
-                'instructions' => $bankSettings['instructions'] ?? null,
+                'bank_name' => $paymentSettings['bank_name'] ?? null,
+                'account_name' => $paymentSettings['account_name'] ?? null,
+                'account_number' => $paymentSettings['account_number'] ?? null,
+                'instructions' => $paymentSettings['instructions'] ?? null,
+            ],
+            'payment_gateways' => [
+                'active' => $paymentSettings['active_gateway'] ?? 'manual',
+                'midtrans' => [
+                    'enabled' => ($paymentSettings['midtrans_enabled'] ?? '0') === '1',
+                    'mode' => $paymentSettings['midtrans_mode'] ?? 'sandbox',
+                    'client_key' => $paymentSettings['midtrans_client_key'] ?? null,
+                ],
+                'xendit' => [
+                    'enabled' => ($paymentSettings['xendit_enabled'] ?? '0') === '1',
+                    'mode' => $paymentSettings['xendit_mode'] ?? 'sandbox',
+                ],
+                'doku' => [
+                    'enabled' => ($paymentSettings['doku_enabled'] ?? '0') === '1',
+                    'mode' => $paymentSettings['doku_mode'] ?? 'sandbox',
+                ],
+                'duitku' => [
+                    'enabled' => ($paymentSettings['duitku_enabled'] ?? '0') === '1',
+                    'mode' => $paymentSettings['duitku_mode'] ?? 'sandbox',
+                ],
             ],
         ]);
     }

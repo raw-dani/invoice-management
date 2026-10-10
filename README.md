@@ -2,6 +2,8 @@
 
 Aplikasi invoice management berbasis Laravel API dan React TypeScript untuk mengelola customer, product, invoice, quote, payment, subscription, billing scheduler, email template, laporan, dan audit activity.
 
+> 📖 **Dokumentasi Presentasi Klien & Fitur Unggulan**: Lihat file [PRESENTASI_FITUR_APLIKASI.md](PRESENTASI_FITUR_APLIKASI.md) untuk panduan lengkap 10 fitur unik (*killer features*), perbandingan kompetitor, dan alur pitch 15 menit ke calon klien.
+
 ## Stack
 
 - Backend: Laravel 10, PHP 8.1+

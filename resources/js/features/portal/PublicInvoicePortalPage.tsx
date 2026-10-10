@@ -80,10 +80,22 @@ export default function PublicInvoicePortalPage() {
         );
     }
 
-    const { invoice, company, bank } = data;
+    const { invoice, company, bank, payment_gateways } = data;
     const isPaid = invoice.status === 'paid';
     const isPendingProof = invoice.payment_proof_status === 'pending';
     const isRejectedProof = invoice.payment_proof_status === 'rejected';
+
+    const hasOnlineGateway = Boolean(
+        payment_gateways?.midtrans?.enabled ||
+        payment_gateways?.xendit?.enabled ||
+        payment_gateways?.doku?.enabled ||
+        payment_gateways?.duitku?.enabled
+    );
+
+    const activeGatewayName = payment_gateways?.active === 'midtrans' ? 'Midtrans' :
+        payment_gateways?.active === 'xendit' ? 'Xendit' :
+        payment_gateways?.active === 'doku' ? 'DOKU Checkout' :
+        payment_gateways?.active === 'duitku' ? 'Duitku Gateway' : null;
 
     return (
         <div className="min-h-screen bg-slate-100 py-8 px-4 sm:px-6 lg:px-8">
@@ -246,6 +258,42 @@ export default function PublicInvoicePortalPage() {
                         </div>
                     )}
                 </div>
+
+                {/* Online Payment Channels Supported */}
+                {hasOnlineGateway && !isPaid && (
+                    <div className="bg-gradient-to-r from-indigo-50/80 via-blue-50/60 to-purple-50/80 rounded-xl shadow-xs border border-indigo-100 p-6 space-y-3">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xl">💳</span>
+                                <div>
+                                    <h3 className="font-semibold text-sm text-gray-950">Metode Pembayaran Online Otomatis</h3>
+                                    <p className="text-xs text-gray-600">
+                                        Mendukung verifikasi pembayaran otomatis real-time tanpa perlu konfirmasi manual bukti transfer.
+                                    </p>
+                                </div>
+                            </div>
+                            {activeGatewayName && (
+                                <span className="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-600 text-white shadow-xs">
+                                    Gateway Aktif: {activeGatewayName}
+                                </span>
+                            )}
+                        </div>
+                        <div className="flex flex-wrap items-center gap-2 pt-1">
+                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
+                                📱 QRIS (Semua Bank &amp; E-Wallet)
+                            </span>
+                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
+                                🏛️ Virtual Account (BCA, Mandiri, BNI, BRI, Permata)
+                            </span>
+                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
+                                💳 Kartu Kredit &amp; Debit
+                            </span>
+                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
+                                🛍️ E-Wallet (GoPay, OVO, Dana, ShopeePay)
+                            </span>
+                        </div>
+                    </div>
+                )}
 
                 {/* Bank Account Transfer & Payment Box */}
                 {bank?.account_number && (

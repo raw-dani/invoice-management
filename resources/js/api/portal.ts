@@ -18,10 +18,19 @@ export interface PublicPortalBank {
     instructions: string | null;
 }
 
+export interface PublicPaymentGateways {
+    active: string;
+    midtrans?: { enabled: boolean; mode: string; client_key?: string | null };
+    xendit?: { enabled: boolean; mode: string };
+    doku?: { enabled: boolean; mode: string };
+    duitku?: { enabled: boolean; mode: string };
+}
+
 export interface PublicInvoiceResponse {
     invoice: Invoice;
     company: PublicPortalCompany | null;
     bank: PublicPortalBank;
+    payment_gateways?: PublicPaymentGateways;
 }
 
 export interface PublicQuoteResponse {
