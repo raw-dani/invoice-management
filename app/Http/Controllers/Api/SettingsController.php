@@ -15,7 +15,22 @@ class SettingsController extends Controller
     private const GROUPS = [
         'invoice' => ['prefix', 'due_days', 'currency', 'tax_rate'],
         'quote' => ['prefix', 'valid_days'],
-        'email' => ['mailer', 'from_name', 'from_address', 'payment_reminders_enabled', 'reminder_due_soon_enabled', 'reminder_due_date_enabled', 'reminder_overdue_enabled', 'reminder_final_enabled'],
+        'email' => [
+            'mailer',
+            'from_name',
+            'from_address',
+            'smtp_provider',
+            'smtp_host',
+            'smtp_port',
+            'smtp_encryption',
+            'smtp_username',
+            'smtp_password',
+            'payment_reminders_enabled',
+            'reminder_due_soon_enabled',
+            'reminder_due_date_enabled',
+            'reminder_overdue_enabled',
+            'reminder_final_enabled',
+        ],
         'payment' => ['bank_name', 'account_name', 'account_number', 'instructions'],
     ];
 
@@ -87,15 +102,26 @@ class SettingsController extends Controller
         $data = $request->validate(['to' => 'required|email']);
         $company = Company::findOrFail(auth()->user()->company_id);
 
+        // Apply company SMTP configuration
+        Setting::configureMailForCompany($company->id);
+
         try {
-            Mail::raw('This is a test email from Invoice Management.', function ($message) use ($data, $company) {
-                $message->to($data['to'])->subject('Invoice Management test email')->from($company->email ?? config('mail.from.address'), $company->name);
+            $fromAddress = config('mail.from.address') ?: $company->email;
+            $fromName = config('mail.from.name') ?: $company->name;
+
+            Mail::raw("Halo!\n\nIni adalah email uji coba dari aplikasi Invoice Management.\nKonfigurasi server SMTP Anda telah berhasil terhubung dan berfungsi dengan baik.", function ($message) use ($data, $fromAddress, $fromName) {
+                $message->to($data['to'])
+                    ->subject('Test Email - Invoice Management')
+                    ->from($fromAddress, $fromName);
             });
         } catch (\Throwable $exception) {
-            return response()->json(['message' => 'Test email failed.', 'error' => $exception->getMessage()], 422);
+            return response()->json([
+                'message' => 'Pengiriman email gagal. Pastikan Host, Port, Username, dan Password SMTP sudah tepat.',
+                'error' => $exception->getMessage(),
+            ], 422);
         }
 
-        return response()->json(['message' => 'Test email sent successfully.']);
+        return response()->json(['message' => 'Email uji coba berhasil dikirim ke ' . $data['to'] . '!']);
     }
 
     public function uploadLogo(Request $request): JsonResponse

@@ -704,49 +704,7 @@ function GroupFields({
             </>
         );
     if (group === 'email')
-        return (
-            <>
-                <Field label="From name">
-                    <Input disabled={isDemo} value={values.from_name ?? ''} onChange={(e) => update('from_name', e.target.value)} />
-                </Field>
-                <Field label="From address">
-                    <Input disabled={isDemo} type="email" value={values.from_address ?? ''} onChange={(e) => update('from_address', e.target.value)} />
-                </Field>
-                <Field label="Mailer">
-                    <Input disabled={isDemo} value={values.mailer ?? ''} placeholder="smtp" onChange={(e) => update('mailer', e.target.value)} />
-                </Field>
-                <Field label="Payment reminders">
-                    <Select disabled={isDemo} value={values.payment_reminders_enabled ?? '1'} onChange={(e) => update('payment_reminders_enabled', e.target.value)}>
-                        <option value="1">Enabled</option>
-                        <option value="0">Disabled</option>
-                    </Select>
-                </Field>
-                <Field label="Reminder: 3 days before due">
-                    <Select disabled={isDemo} value={values.reminder_due_soon_enabled ?? '1'} onChange={(e) => update('reminder_due_soon_enabled', e.target.value)}>
-                        <option value="1">Enabled</option>
-                        <option value="0">Disabled</option>
-                    </Select>
-                </Field>
-                <Field label="Reminder: on due date">
-                    <Select disabled={isDemo} value={values.reminder_due_date_enabled ?? '1'} onChange={(e) => update('reminder_due_date_enabled', e.target.value)}>
-                        <option value="1">Enabled</option>
-                        <option value="0">Disabled</option>
-                    </Select>
-                </Field>
-                <Field label="Reminder: 3 days overdue">
-                    <Select disabled={isDemo} value={values.reminder_overdue_enabled ?? '1'} onChange={(e) => update('reminder_overdue_enabled', e.target.value)}>
-                        <option value="1">Enabled</option>
-                        <option value="0">Disabled</option>
-                    </Select>
-                </Field>
-                <Field label="Reminder: 7 days overdue (final)">
-                    <Select disabled={isDemo} value={values.reminder_final_enabled ?? '1'} onChange={(e) => update('reminder_final_enabled', e.target.value)}>
-                        <option value="1">Enabled</option>
-                        <option value="0">Disabled</option>
-                    </Select>
-                </Field>
-            </>
-        );
+        return <EmailFields values={values} update={update} isDemo={isDemo} />;
     return (
         <>
             <Field label="Bank name">
@@ -765,6 +723,348 @@ function GroupFields({
     );
 }
 
+interface SmtpPreset {
+    id: string;
+    name: string;
+    icon: string;
+    host: string;
+    port: string;
+    encryption: string;
+    defaultUsername?: string;
+    badge?: string;
+    hint: string;
+}
+
+const SMTP_PRESETS: SmtpPreset[] = [
+    {
+        id: 'gmail',
+        name: 'Gmail / Google Workspace',
+        icon: '🔴',
+        host: 'smtp.gmail.com',
+        port: '587',
+        encryption: 'tls',
+        badge: 'Google',
+        hint: 'Wajib menggunakan App Password (Sandi Aplikasi 16 karakter), bukan sandi Google biasa. Aktifkan 2FA di Akun Google > Keamanan > Sandi Aplikasi > buat sandi baru untuk "Email".',
+    },
+    {
+        id: 'mailtrap',
+        name: 'Mailtrap (Sandbox & Testing)',
+        icon: '🧪',
+        host: 'sandbox.smtp.mailtrap.io',
+        port: '2525',
+        encryption: 'tls',
+        badge: 'Testing',
+        hint: 'Sangat direkomendasikan untuk uji coba. Salin Host, Port, Username, dan Password dari menu Inboxes > SMTP Settings di dashboard Mailtrap Anda.',
+    },
+    {
+        id: 'brevo',
+        name: 'Brevo (dahulu Sendinblue)',
+        icon: '📨',
+        host: 'smtp-relay.brevo.com',
+        port: '587',
+        encryption: 'tls',
+        badge: 'Transactional',
+        hint: 'Username adalah alamat email login akun Brevo Anda. Password adalah SMTP Key / Master Key yang digenerate di menu Transactional > Settings di Brevo.',
+    },
+    {
+        id: 'sendgrid',
+        name: 'SendGrid (Twilio)',
+        icon: '⚡',
+        host: 'smtp.sendgrid.net',
+        port: '587',
+        encryption: 'tls',
+        defaultUsername: 'apikey',
+        badge: 'High Volume',
+        hint: 'Username WAJIB selalu "apikey". Password adalah API Key SendGrid Anda yang memiliki izin Mail Send.',
+    },
+    {
+        id: 'zoho',
+        name: 'Zoho Mail',
+        icon: '📮',
+        host: 'smtp.zoho.com',
+        port: '465',
+        encryption: 'ssl',
+        badge: 'Business',
+        hint: 'Gunakan port 465 (SSL) atau 587 (TLS). Jika akun menggunakan 2FA, buat Application-Specific Password di pengaturan akun Zoho.',
+    },
+    {
+        id: 'custom',
+        name: 'Custom SMTP / Lainnya (cPanel / Webmail / VPS)',
+        icon: '⚙️',
+        host: '',
+        port: '587',
+        encryption: 'tls',
+        badge: 'Custom',
+        hint: 'Masukkan Host, Port, dan kredensial SMTP yang disediakan oleh hosting cPanel, Webmail, Plesk, atau server mail mandiri Anda.',
+    },
+];
+
+function EmailFields({
+    values,
+    update,
+    isDemo,
+}: {
+    values: Record<string, any>;
+    update: (key: string, value: any) => void;
+    isDemo?: boolean;
+}) {
+    const [showPassword, setShowPassword] = useState(false);
+
+    // Identify active preset based on smtp_provider or host pattern
+    const activeProvider = values.smtp_provider || (() => {
+        const host = values.smtp_host?.toLowerCase() || '';
+        if (host.includes('gmail.com')) return 'gmail';
+        if (host.includes('mailtrap.io')) return 'mailtrap';
+        if (host.includes('brevo.com') || host.includes('sendinblue.com')) return 'brevo';
+        if (host.includes('sendgrid.net')) return 'sendgrid';
+        if (host.includes('zoho.com')) return 'zoho';
+        return 'custom';
+    })();
+
+    const currentPreset = SMTP_PRESETS.find((p) => p.id === activeProvider) || SMTP_PRESETS[SMTP_PRESETS.length - 1];
+
+    const applyPreset = (presetId: string) => {
+        const preset = SMTP_PRESETS.find((p) => p.id === presetId);
+        if (!preset) return;
+
+        update('smtp_provider', preset.id);
+        if (preset.id !== 'custom') {
+            update('smtp_host', preset.host);
+            update('smtp_port', preset.port);
+            update('smtp_encryption', preset.encryption);
+            if (preset.defaultUsername) {
+                update('smtp_username', preset.defaultUsername);
+            }
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Bagian 1: Identitas Pengirim */}
+            <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                    <span className="text-sm font-semibold text-gray-900">1. Identitas Pengirim Email (From Sender)</span>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Field label="From Name (Nama Pengirim)">
+                        <Input
+                            disabled={isDemo}
+                            value={values.from_name ?? ''}
+                            onChange={(e) => update('from_name', e.target.value)}
+                            placeholder="PT Solusi Hebat"
+                        />
+                    </Field>
+                    <Field label="From Address (Alamat Email Pengirim)">
+                        <Input
+                            disabled={isDemo}
+                            type="email"
+                            value={values.from_address ?? ''}
+                            onChange={(e) => update('from_address', e.target.value)}
+                            placeholder="billing@solusihebat.com"
+                        />
+                    </Field>
+                </div>
+            </div>
+
+            {/* Bagian 2: Konfigurasi Server SMTP */}
+            <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-2">
+                    <span className="text-sm font-semibold text-gray-900">2. Konfigurasi Server SMTP (Outgoing Mail)</span>
+                    <span className="text-xs text-indigo-600 font-medium hidden sm:inline">Pilih preset atau masukkan manual</span>
+                </div>
+
+                {/* Preset Provider Selector */}
+                <div>
+                    <label className="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">
+                        Pilih Layanan SMTP (Preset Otomatis)
+                    </label>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                        {SMTP_PRESETS.map((p) => {
+                            const isSelected = activeProvider === p.id;
+                            return (
+                                <button
+                                    key={p.id}
+                                    type="button"
+                                    disabled={isDemo}
+                                    onClick={() => applyPreset(p.id)}
+                                    className={`flex items-center gap-2 p-2.5 rounded-lg border text-left transition ${
+                                        isSelected
+                                            ? 'border-indigo-600 bg-indigo-50/90 text-indigo-900 ring-2 ring-indigo-500/20 font-medium shadow-sm'
+                                            : 'border-gray-200 bg-white hover:bg-gray-100 text-gray-700 hover:border-gray-300'
+                                    }`}
+                                >
+                                    <span className="text-lg">{p.icon}</span>
+                                    <div className="min-w-0 flex-1">
+                                        <div className="text-xs font-semibold truncate">{p.name.split(' (')[0]}</div>
+                                        {p.badge && (
+                                            <span className="inline-block text-[10px] px-1.5 py-0.2 bg-gray-100 text-gray-600 rounded">
+                                                {p.badge}
+                                            </span>
+                                        )}
+                                    </div>
+                                </button>
+                            );
+                        })}
+                    </div>
+                </div>
+
+                {/* Preset Guidance Card */}
+                {currentPreset && (
+                    <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
+                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <div>
+                            <span className="font-semibold text-blue-950">Petunjuk {currentPreset.name}: </span>
+                            <span>{currentPreset.hint}</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* SMTP Server Details Form */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+                    <div className="md:col-span-2">
+                        <Field label="SMTP Host (Server Address)">
+                            <Input
+                                disabled={isDemo}
+                                value={values.smtp_host ?? ''}
+                                onChange={(e) => update('smtp_host', e.target.value)}
+                                placeholder="smtp.gmail.com"
+                            />
+                        </Field>
+                    </div>
+                    <div>
+                        <Field label="SMTP Port">
+                            <Input
+                                disabled={isDemo}
+                                type="number"
+                                value={values.smtp_port ?? '587'}
+                                onChange={(e) => update('smtp_port', e.target.value)}
+                                placeholder="587"
+                            />
+                        </Field>
+                    </div>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Field label="Enkripsi (Encryption)">
+                        <Select
+                            disabled={isDemo}
+                            value={values.smtp_encryption ?? 'tls'}
+                            onChange={(e) => update('smtp_encryption', e.target.value)}
+                        >
+                            <option value="tls">TLS (Port 587 atau 2525) - Paling Umum</option>
+                            <option value="ssl">SSL (Port 465)</option>
+                            <option value="none">Tanpa Enkripsi (None)</option>
+                        </Select>
+                    </Field>
+                    <Field label="Driver Mailer">
+                        <Input
+                            disabled={isDemo}
+                            value={values.mailer ?? 'smtp'}
+                            onChange={(e) => update('mailer', e.target.value)}
+                            placeholder="smtp"
+                        />
+                    </Field>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Field label="SMTP Username">
+                        <Input
+                            disabled={isDemo}
+                            value={values.smtp_username ?? ''}
+                            onChange={(e) => update('smtp_username', e.target.value)}
+                            placeholder={activeProvider === 'sendgrid' ? 'apikey' : 'email@perusahaan.com'}
+                        />
+                    </Field>
+                    <div>
+                        <label className="block space-y-1">
+                            <span className="block text-sm font-medium text-gray-700">SMTP Password / API Key</span>
+                            <div className="relative">
+                                <Input
+                                    disabled={isDemo}
+                                    type={showPassword ? 'text' : 'password'}
+                                    value={values.smtp_password ?? ''}
+                                    onChange={(e) => update('smtp_password', e.target.value)}
+                                    placeholder="••••••••••••••••"
+                                    className="pr-16"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="absolute right-2 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 text-xs px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded font-medium transition"
+                                    tabIndex={-1}
+                                >
+                                    {showPassword ? 'Sembunyikan' : 'Lihat'}
+                                </button>
+                            </div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            {/* Bagian 3: Otomatisasi Pengingat Pembayaran */}
+            <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
+                <div className="flex items-center gap-2 border-b border-gray-200 pb-2">
+                    <span className="text-sm font-semibold text-gray-900">3. Jadwal Pengingat Pembayaran Otomatis</span>
+                </div>
+                <div className="space-y-3">
+                    <Field label="Status Pengingat Pembayaran (Master Switch)">
+                        <Select
+                            disabled={isDemo}
+                            value={values.payment_reminders_enabled ?? '1'}
+                            onChange={(e) => update('payment_reminders_enabled', e.target.value)}
+                        >
+                            <option value="1">Aktif (Enabled)</option>
+                            <option value="0">Nonaktif (Disabled)</option>
+                        </Select>
+                    </Field>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                        <Field label="Pengingat: 3 Hari Sebelum Jatuh Tempo">
+                            <Select
+                                disabled={isDemo}
+                                value={values.reminder_due_soon_enabled ?? '1'}
+                                onChange={(e) => update('reminder_due_soon_enabled', e.target.value)}
+                            >
+                                <option value="1">Kirim Otomatis</option>
+                                <option value="0">Jangan Kirim</option>
+                            </Select>
+                        </Field>
+                        <Field label="Pengingat: Pada Hari H Jatuh Tempo">
+                            <Select
+                                disabled={isDemo}
+                                value={values.reminder_due_date_enabled ?? '1'}
+                                onChange={(e) => update('reminder_due_date_enabled', e.target.value)}
+                            >
+                                <option value="1">Kirim Otomatis</option>
+                                <option value="0">Jangan Kirim</option>
+                            </Select>
+                        </Field>
+                        <Field label="Peringatan: 3 Hari Lewat Jatuh Tempo">
+                            <Select
+                                disabled={isDemo}
+                                value={values.reminder_overdue_enabled ?? '1'}
+                                onChange={(e) => update('reminder_overdue_enabled', e.target.value)}
+                            >
+                                <option value="1">Kirim Otomatis</option>
+                                <option value="0">Jangan Kirim</option>
+                            </Select>
+                        </Field>
+                        <Field label="Peringatan Final: 7 Hari Lewat Jatuh Tempo">
+                            <Select
+                                disabled={isDemo}
+                                value={values.reminder_final_enabled ?? '1'}
+                                onChange={(e) => update('reminder_final_enabled', e.target.value)}
+                            >
+                                <option value="1">Kirim Otomatis</option>
+                                <option value="0">Jangan Kirim</option>
+                            </Select>
+                        </Field>
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+}
+
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
     return (
         <label className="block space-y-1">
@@ -778,33 +1078,46 @@ function TestEmail({ isDemo }: { isDemo?: boolean }) {
     const [to, setTo] = useState('');
     const mutation = useMutation({
         mutationFn: () => settingsApi.testEmail(to),
-        onSuccess: () => toast.success('Test email sent successfully.'),
-        onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to send test email.'),
+        onSuccess: (res: any) => toast.success(res?.data?.message || res?.message || 'Email uji coba berhasil dikirim!'),
+        onError: (err: any) => {
+            const msg = err?.response?.data?.message || 'Gagal mengirim email uji coba.';
+            const detail = err?.response?.data?.error;
+            toast.error(detail ? `${msg} (${detail})` : msg);
+        },
     });
     return (
-        <div className="border-t pt-4">
-            <Field label="Test recipient">
-                <Input
-                    type="email"
-                    value={to}
-                    onChange={(event) => setTo(event.target.value)}
-                    placeholder="you@example.com"
-                    disabled={isDemo}
-                />
-            </Field>
-            <Button
-                className="mt-2"
-                type="button"
-                size="sm"
-                variant="secondary"
-                loading={mutation.isPending}
-                disabled={!to || isDemo}
-                onClick={() => mutation.mutate()}
-            >
-                Send Test Email
-            </Button>
+        <div className="bg-indigo-50/60 border border-indigo-100 rounded-lg p-4 mt-4">
+            <div className="flex items-center gap-2 mb-1.5">
+                <span className="text-lg">📬</span>
+                <h4 className="text-sm font-semibold text-gray-900">Uji Coba Pengiriman Email (Test Connection)</h4>
+            </div>
+            <p className="text-xs text-gray-600 mb-3">
+                Kirim email uji coba untuk memastikan host, port, username, dan password SMTP Anda berhasil tersambung.
+                <strong className="text-indigo-700 ml-1">Pastikan sudah klik tombol "Save Changes" terlebih dahulu sebelum melakukan uji coba.</strong>
+            </p>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="flex-1">
+                    <Input
+                        type="email"
+                        value={to}
+                        onChange={(event) => setTo(event.target.value)}
+                        placeholder="Masukkan alamat email penerima uji coba..."
+                        disabled={isDemo}
+                    />
+                </div>
+                <Button
+                    type="button"
+                    size="sm"
+                    className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium whitespace-nowrap"
+                    loading={mutation.isPending}
+                    disabled={!to || isDemo}
+                    onClick={() => mutation.mutate()}
+                >
+                    Kirim Email Uji Coba
+                </Button>
+            </div>
             {isDemo && (
-                <p className="text-xs text-amber-700 mt-1.5">
+                <p className="text-xs text-amber-700 mt-2">
                     Pengiriman email uji coba dinonaktifkan pada peran Demo.
                 </p>
             )}

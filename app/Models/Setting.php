@@ -42,4 +42,42 @@ class Setting extends Model
             ['value' => $value]
         );
     }
+
+    /**
+     * Dynamically configure Laravel mail settings using company's stored SMTP configuration.
+     */
+    public static function configureMailForCompany(int $companyId): void
+    {
+        $settings = self::where('company_id', $companyId)->pluck('value', 'key');
+        $company = Company::find($companyId);
+
+        $mailer = $settings['mailer'] ?? 'smtp';
+        config(['mail.default' => $mailer]);
+
+        if (!empty($settings['smtp_host'])) {
+            $encryption = $settings['smtp_encryption'] ?? 'tls';
+            if ($encryption === 'none' || empty($encryption)) {
+                $encryption = null;
+            }
+
+            config([
+                'mail.mailers.smtp.transport' => 'smtp',
+                'mail.mailers.smtp.host' => $settings['smtp_host'],
+                'mail.mailers.smtp.port' => (int) ($settings['smtp_port'] ?? 587),
+                'mail.mailers.smtp.encryption' => $encryption,
+                'mail.mailers.smtp.username' => $settings['smtp_username'] ?? null,
+                'mail.mailers.smtp.password' => $settings['smtp_password'] ?? null,
+            ]);
+        }
+
+        $fromAddress = $settings['from_address'] ?? $company?->email ?? config('mail.from.address');
+        $fromName = $settings['from_name'] ?? $company?->name ?? config('mail.from.name');
+
+        if ($fromAddress) {
+            config([
+                'mail.from.address' => $fromAddress,
+                'mail.from.name' => $fromName,
+            ]);
+        }
+    }
 }
