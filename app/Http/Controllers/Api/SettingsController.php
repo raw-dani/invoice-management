@@ -107,7 +107,7 @@ class SettingsController extends Controller
 
     public function demoDataStats(\App\Services\DemoDataService $service): JsonResponse
     {
-        $this->ensureAdminUser();
+        abort_unless(in_array(auth()->user()->role, ['owner', 'admin', 'demo']), 403, 'Unauthorized action.');
         $company = Company::findOrFail(auth()->user()->company_id);
 
         return response()->json([

@@ -62,7 +62,7 @@ class UserController extends Controller
     {
         $this->authorize('manage', $user);
 
-        $user->update($request->validate(['role' => 'required|in:admin,staff,viewer']));
+        $user->update($request->validate(['role' => 'required|in:admin,staff,viewer,demo']));
 
         ActivityLog::record('user.role_updated', "User {$user->name} role updated to {$user->role}", $user);
 

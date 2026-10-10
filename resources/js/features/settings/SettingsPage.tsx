@@ -19,12 +19,13 @@ const GROUPS: Array<{ key: SettingsGroup; label: string }> = [
 export default function SettingsPage() {
     const { user } = useAuth();
     const isAdmin = Boolean(user && ['owner', 'admin'].includes(user.role));
+    const isDemo = user?.role === 'demo';
     const [group, setGroup] = useState<SettingsGroup>('company');
     const queryClient = useQueryClient();
 
     const availableGroups: Array<{ key: SettingsGroup; label: string }> = [
         ...GROUPS,
-        ...(isAdmin ? [{ key: 'demo_data' as const, label: 'Demo Data' }] : []),
+        ...(isAdmin || isDemo ? [{ key: 'demo_data' as const, label: 'Demo Data' }] : []),
     ];
 
     const query = useQuery({
@@ -74,6 +75,17 @@ export default function SettingsPage() {
     return (
         <>
             <PageHeader title="Settings" subtitle="Configure company, billing, email, payment preferences, and demo data." />
+            {isDemo && (
+                <div className="flex items-center gap-3 p-4 mb-6 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs">
+                    <span className="text-2xl">🔒</span>
+                    <div>
+                        <h4 className="font-semibold text-sm">Mode Demo Aktif — Pengaturan View Only</h4>
+                        <p className="text-xs text-amber-800 mt-0.5">
+                            Akun Anda memiliki peran <strong>Demo</strong>. Anda dapat melihat seluruh konfigurasi dan data demo perusahaan, namun hak akses untuk mengubah pengaturan, mengunggah logo, dan memodifikasi data demo dinonaktifkan.
+                        </p>
+                    </div>
+                </div>
+            )}
             <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
                 <Card>
                     <CardBody className="space-y-1">
@@ -101,7 +113,7 @@ export default function SettingsPage() {
                     </CardHeader>
                     <CardBody>
                         {group === 'demo_data' ? (
-                            <DemoDataSettings />
+                            <DemoDataSettings isDemo={isDemo} />
                         ) : query.isLoading ? (
                             <div className="text-sm text-gray-500 py-4">Loading...</div>
                         ) : (
@@ -115,16 +127,19 @@ export default function SettingsPage() {
                                         onLogoChange={handleLogoChange}
                                         onUploadLogo={handleUploadLogo}
                                         uploadLogoMutation={uploadLogo}
+                                        isDemo={isDemo}
                                     />
                                 ) : (
-                                    <GroupFields group={group} values={values} update={update} />
+                                    <GroupFields group={group} values={values} update={update} isDemo={isDemo} />
                                 )}
-                                {group === 'email' && <TestEmail />}
-                                <div className="flex justify-end gap-2 pt-2">
-                                    <Button loading={save.isPending} onClick={() => save.mutate()}>
-                                        Save Changes
-                                    </Button>
-                                </div>
+                                {group === 'email' && <TestEmail isDemo={isDemo} />}
+                                {!isDemo && (
+                                    <div className="flex justify-end gap-2 pt-2">
+                                        <Button loading={save.isPending} onClick={() => save.mutate()}>
+                                            Save Changes
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                         )}
                     </CardBody>
@@ -134,7 +149,7 @@ export default function SettingsPage() {
     );
 }
 
-function DemoDataSettings() {
+function DemoDataSettings({ isDemo }: { isDemo?: boolean }) {
     const queryClient = useQueryClient();
     const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -266,37 +281,43 @@ function DemoDataSettings() {
             </div>
 
             {/* Actions */}
-            <div className="flex flex-wrap items-center gap-3 pt-2">
-                {hasDemo ? (
-                    <>
+            {isDemo ? (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800">
+                    <strong>Mode Demo (View Only):</strong> Statistik data simulasi di atas dapat Anda tinjau untuk demonstrasi. Tombol inisialisasi dan pembersihan data demo dinonaktifkan pada peran Demo.
+                </div>
+            ) : (
+                <div className="flex flex-wrap items-center gap-3 pt-2">
+                    {hasDemo ? (
+                        <>
+                            <Button
+                                type="button"
+                                variant="danger"
+                                onClick={() => setConfirmDelete(true)}
+                                loading={clearMutation.isPending}
+                            >
+                                Hapus Data Demo
+                            </Button>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                onClick={() => generateMutation.mutate()}
+                                loading={generateMutation.isPending}
+                            >
+                                Muat Ulang / Reset Data Demo
+                            </Button>
+                        </>
+                    ) : (
                         <Button
                             type="button"
-                            variant="danger"
-                            onClick={() => setConfirmDelete(true)}
-                            loading={clearMutation.isPending}
-                        >
-                            Hapus Data Demo
-                        </Button>
-                        <Button
-                            type="button"
-                            variant="secondary"
+                            variant="primary"
                             onClick={() => generateMutation.mutate()}
                             loading={generateMutation.isPending}
                         >
-                            Muat Ulang / Reset Data Demo
+                            Muat Data Demo Lengkap
                         </Button>
-                    </>
-                ) : (
-                    <Button
-                        type="button"
-                        variant="primary"
-                        onClick={() => generateMutation.mutate()}
-                        loading={generateMutation.isPending}
-                    >
-                        Muat Data Demo Lengkap
-                    </Button>
-                )}
-            </div>
+                    )}
+                </div>
+            )}
 
             <ConfirmDialog
                 open={confirmDelete}
@@ -320,6 +341,7 @@ function CompanyFields({
     onLogoChange,
     onUploadLogo,
     uploadLogoMutation,
+    isDemo,
 }: {
     values: Record<string, string | null>;
     update: (key: string, value: string) => void;
@@ -328,6 +350,7 @@ function CompanyFields({
     onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
     onUploadLogo: () => void;
     uploadLogoMutation: any;
+    isDemo?: boolean;
 }) {
     const logoUrl = (() => {
         const raw = logoPreview || values.logo;
@@ -349,38 +372,40 @@ function CompanyFields({
                             <span className="text-xs text-gray-400">No logo</span>
                         )}
                     </div>
-                    <div className="space-y-2">
-                        <Input type="file" accept="image/*" onChange={onLogoChange} />
-                        <Button
-                            type="button"
-                            size="sm"
-                            variant="secondary"
-                            disabled={!logoFile || uploadLogoMutation.isPending}
-                            loading={uploadLogoMutation.isPending}
-                            onClick={onUploadLogo}
-                        >
-                            Upload Logo
-                        </Button>
-                    </div>
+                    {!isDemo && (
+                        <div className="space-y-2">
+                            <Input type="file" accept="image/*" onChange={onLogoChange} />
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={!logoFile || uploadLogoMutation.isPending}
+                                loading={uploadLogoMutation.isPending}
+                                onClick={onUploadLogo}
+                            >
+                                Upload Logo
+                            </Button>
+                        </div>
+                    )}
                 </div>
             </div>
             <Field label="Company name">
-                <Input value={values.name ?? ''} onChange={(e) => update('name', e.target.value)} />
+                <Input disabled={isDemo} value={values.name ?? ''} onChange={(e) => update('name', e.target.value)} />
             </Field>
             <Field label="Email">
-                <Input type="email" value={values.email ?? ''} onChange={(e) => update('email', e.target.value)} />
+                <Input disabled={isDemo} type="email" value={values.email ?? ''} onChange={(e) => update('email', e.target.value)} />
             </Field>
             <Field label="Phone">
-                <Input value={values.phone ?? ''} onChange={(e) => update('phone', e.target.value)} />
+                <Input disabled={isDemo} value={values.phone ?? ''} onChange={(e) => update('phone', e.target.value)} />
             </Field>
             <Field label="Website">
-                <Input value={values.website ?? ''} onChange={(e) => update('website', e.target.value)} />
+                <Input disabled={isDemo} value={values.website ?? ''} onChange={(e) => update('website', e.target.value)} />
             </Field>
             <Field label="Address">
-                <Textarea value={values.address ?? ''} onChange={(e) => update('address', e.target.value)} />
+                <Textarea disabled={isDemo} value={values.address ?? ''} onChange={(e) => update('address', e.target.value)} />
             </Field>
             <Field label="Tax number">
-                <Input value={values.tax_number ?? ''} onChange={(e) => update('tax_number', e.target.value)} />
+                <Input disabled={isDemo} value={values.tax_number ?? ''} onChange={(e) => update('tax_number', e.target.value)} />
             </Field>
         </div>
     );
@@ -390,22 +415,24 @@ function GroupFields({
     group,
     values,
     update,
+    isDemo,
 }: {
     group: Exclude<SettingsGroup, 'company' | 'demo_data'>;
     values: Record<string, string | null>;
     update: (key: string, value: string) => void;
+    isDemo?: boolean;
 }) {
     if (group === 'invoice')
         return (
             <>
                 <Field label="Invoice prefix">
-                    <Input value={values.prefix ?? ''} onChange={(e) => update('prefix', e.target.value)} placeholder="INV-" />
+                    <Input disabled={isDemo} value={values.prefix ?? ''} onChange={(e) => update('prefix', e.target.value)} placeholder="INV-" />
                 </Field>
                 <Field label="Due days">
-                    <Input type="number" value={values.due_days ?? ''} onChange={(e) => update('due_days', e.target.value)} />
+                    <Input disabled={isDemo} type="number" value={values.due_days ?? ''} onChange={(e) => update('due_days', e.target.value)} />
                 </Field>
                 <Field label="Currency">
-                    <Select value={values.currency ?? 'IDR'} onChange={(e) => update('currency', e.target.value)}>
+                    <Select disabled={isDemo} value={values.currency ?? 'IDR'} onChange={(e) => update('currency', e.target.value)}>
                         <option>IDR</option>
                         <option>USD</option>
                         <option>SGD</option>
@@ -414,7 +441,7 @@ function GroupFields({
                     </Select>
                 </Field>
                 <Field label="Default tax rate">
-                    <Input type="number" step="0.01" value={values.tax_rate ?? ''} onChange={(e) => update('tax_rate', e.target.value)} />
+                    <Input disabled={isDemo} type="number" step="0.01" value={values.tax_rate ?? ''} onChange={(e) => update('tax_rate', e.target.value)} />
                 </Field>
             </>
         );
@@ -422,10 +449,10 @@ function GroupFields({
         return (
             <>
                 <Field label="Quote prefix">
-                    <Input value={values.prefix ?? ''} onChange={(e) => update('prefix', e.target.value)} placeholder="QT-" />
+                    <Input disabled={isDemo} value={values.prefix ?? ''} onChange={(e) => update('prefix', e.target.value)} placeholder="QT-" />
                 </Field>
                 <Field label="Valid days">
-                    <Input type="number" value={values.valid_days ?? ''} onChange={(e) => update('valid_days', e.target.value)} />
+                    <Input disabled={isDemo} type="number" value={values.valid_days ?? ''} onChange={(e) => update('valid_days', e.target.value)} />
                 </Field>
             </>
         );
@@ -433,40 +460,40 @@ function GroupFields({
         return (
             <>
                 <Field label="From name">
-                    <Input value={values.from_name ?? ''} onChange={(e) => update('from_name', e.target.value)} />
+                    <Input disabled={isDemo} value={values.from_name ?? ''} onChange={(e) => update('from_name', e.target.value)} />
                 </Field>
                 <Field label="From address">
-                    <Input type="email" value={values.from_address ?? ''} onChange={(e) => update('from_address', e.target.value)} />
+                    <Input disabled={isDemo} type="email" value={values.from_address ?? ''} onChange={(e) => update('from_address', e.target.value)} />
                 </Field>
                 <Field label="Mailer">
-                    <Input value={values.mailer ?? ''} placeholder="smtp" onChange={(e) => update('mailer', e.target.value)} />
+                    <Input disabled={isDemo} value={values.mailer ?? ''} placeholder="smtp" onChange={(e) => update('mailer', e.target.value)} />
                 </Field>
                 <Field label="Payment reminders">
-                    <Select value={values.payment_reminders_enabled ?? '1'} onChange={(e) => update('payment_reminders_enabled', e.target.value)}>
+                    <Select disabled={isDemo} value={values.payment_reminders_enabled ?? '1'} onChange={(e) => update('payment_reminders_enabled', e.target.value)}>
                         <option value="1">Enabled</option>
                         <option value="0">Disabled</option>
                     </Select>
                 </Field>
                 <Field label="Reminder: 3 days before due">
-                    <Select value={values.reminder_due_soon_enabled ?? '1'} onChange={(e) => update('reminder_due_soon_enabled', e.target.value)}>
+                    <Select disabled={isDemo} value={values.reminder_due_soon_enabled ?? '1'} onChange={(e) => update('reminder_due_soon_enabled', e.target.value)}>
                         <option value="1">Enabled</option>
                         <option value="0">Disabled</option>
                     </Select>
                 </Field>
                 <Field label="Reminder: on due date">
-                    <Select value={values.reminder_due_date_enabled ?? '1'} onChange={(e) => update('reminder_due_date_enabled', e.target.value)}>
+                    <Select disabled={isDemo} value={values.reminder_due_date_enabled ?? '1'} onChange={(e) => update('reminder_due_date_enabled', e.target.value)}>
                         <option value="1">Enabled</option>
                         <option value="0">Disabled</option>
                     </Select>
                 </Field>
                 <Field label="Reminder: 3 days overdue">
-                    <Select value={values.reminder_overdue_enabled ?? '1'} onChange={(e) => update('reminder_overdue_enabled', e.target.value)}>
+                    <Select disabled={isDemo} value={values.reminder_overdue_enabled ?? '1'} onChange={(e) => update('reminder_overdue_enabled', e.target.value)}>
                         <option value="1">Enabled</option>
                         <option value="0">Disabled</option>
                     </Select>
                 </Field>
                 <Field label="Reminder: 7 days overdue (final)">
-                    <Select value={values.reminder_final_enabled ?? '1'} onChange={(e) => update('reminder_final_enabled', e.target.value)}>
+                    <Select disabled={isDemo} value={values.reminder_final_enabled ?? '1'} onChange={(e) => update('reminder_final_enabled', e.target.value)}>
                         <option value="1">Enabled</option>
                         <option value="0">Disabled</option>
                     </Select>
@@ -476,16 +503,16 @@ function GroupFields({
     return (
         <>
             <Field label="Bank name">
-                <Input value={values.bank_name ?? ''} onChange={(e) => update('bank_name', e.target.value)} />
+                <Input disabled={isDemo} value={values.bank_name ?? ''} onChange={(e) => update('bank_name', e.target.value)} />
             </Field>
             <Field label="Account name">
-                <Input value={values.account_name ?? ''} onChange={(e) => update('account_name', e.target.value)} />
+                <Input disabled={isDemo} value={values.account_name ?? ''} onChange={(e) => update('account_name', e.target.value)} />
             </Field>
             <Field label="Account number">
-                <Input value={values.account_number ?? ''} onChange={(e) => update('account_number', e.target.value)} />
+                <Input disabled={isDemo} value={values.account_number ?? ''} onChange={(e) => update('account_number', e.target.value)} />
             </Field>
             <Field label="Payment instructions">
-                <Textarea value={values.instructions ?? ''} onChange={(e) => update('instructions', e.target.value)} />
+                <Textarea disabled={isDemo} value={values.instructions ?? ''} onChange={(e) => update('instructions', e.target.value)} />
             </Field>
         </>
     );
@@ -500,13 +527,23 @@ function Field({ label, children }: { label: string; children: React.ReactNode }
     );
 }
 
-function TestEmail() {
+function TestEmail({ isDemo }: { isDemo?: boolean }) {
     const [to, setTo] = useState('');
-    const mutation = useMutation({ mutationFn: () => settingsApi.testEmail(to) });
+    const mutation = useMutation({
+        mutationFn: () => settingsApi.testEmail(to),
+        onSuccess: () => toast.success('Test email sent successfully.'),
+        onError: (err: any) => toast.error(err?.response?.data?.message || 'Failed to send test email.'),
+    });
     return (
         <div className="border-t pt-4">
             <Field label="Test recipient">
-                <Input type="email" value={to} onChange={(event) => setTo(event.target.value)} placeholder="you@example.com" />
+                <Input
+                    type="email"
+                    value={to}
+                    onChange={(event) => setTo(event.target.value)}
+                    placeholder="you@example.com"
+                    disabled={isDemo}
+                />
             </Field>
             <Button
                 className="mt-2"
@@ -514,11 +551,16 @@ function TestEmail() {
                 size="sm"
                 variant="secondary"
                 loading={mutation.isPending}
-                disabled={!to}
+                disabled={!to || isDemo}
                 onClick={() => mutation.mutate()}
             >
                 Send Test Email
             </Button>
+            {isDemo && (
+                <p className="text-xs text-amber-700 mt-1.5">
+                    Pengiriman email uji coba dinonaktifkan pada peran Demo.
+                </p>
+            )}
         </div>
     );
 }

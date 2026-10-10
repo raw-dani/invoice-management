@@ -19,7 +19,7 @@ class UpdateUserRequest extends FormRequest
         return [
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $userId],
-            'role' => 'required|in:admin,staff,viewer',
+            'role' => 'required|in:admin,staff,viewer,demo',
         ];
     }
 }

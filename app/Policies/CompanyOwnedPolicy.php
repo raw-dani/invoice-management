@@ -38,6 +38,6 @@ abstract class CompanyOwnedPolicy
 
     public function delete(User $user, $model): bool
     {
-        return $this->sameCompany($user, $model) && in_array($user->role, ['owner', 'admin'], true);
+        return $this->sameCompany($user, $model) && in_array($user->role, ['owner', 'admin', 'demo'], true);
     }
 }

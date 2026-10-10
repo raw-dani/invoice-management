@@ -110,8 +110,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/subscriptions', [ReportController::class, 'subscriptions']);
     Route::get('reports/export/csv', [ReportController::class, 'exportCsv']);
     Route::get('reports/export/pdf', [ReportController::class, 'exportPdf']);
-    Route::get('settings/demo-data/stats', [SettingsController::class, 'demoDataStats'])->middleware('role:owner,admin');
-    Route::get('settings/demo_data/stats', [SettingsController::class, 'demoDataStats'])->middleware('role:owner,admin');
+    Route::get('settings/demo-data/stats', [SettingsController::class, 'demoDataStats'])->middleware('role:owner,admin,demo');
+    Route::get('settings/demo_data/stats', [SettingsController::class, 'demoDataStats'])->middleware('role:owner,admin,demo');
     Route::post('settings/demo-data/clear', [SettingsController::class, 'clearDemoData'])->middleware('role:owner,admin');
     Route::post('settings/demo_data/clear', [SettingsController::class, 'clearDemoData'])->middleware('role:owner,admin');
     Route::post('settings/demo-data/generate', [SettingsController::class, 'generateDemoData'])->middleware('role:owner,admin');
@@ -126,7 +126,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('profile', [ProfileController::class, 'show']);
     Route::put('profile', [ProfileController::class, 'update']);
     Route::put('profile/password', [ProfileController::class, 'changePassword']);
-    Route::apiResource('users', UserController::class)->only(['index', 'store', 'update', 'destroy'])->middleware('role:owner,admin');
+    Route::get('users', [UserController::class, 'index'])->middleware('role:owner,admin,demo');
+    Route::post('users', [UserController::class, 'store'])->middleware('role:owner,admin');
+    Route::put('users/{user}', [UserController::class, 'update'])->middleware('role:owner,admin');
+    Route::delete('users/{user}', [UserController::class, 'destroy'])->middleware('role:owner,admin');
     Route::post('users/{user}/assign-role', [UserController::class, 'assignRole'])->middleware('role:owner,admin');
     Route::get('notifications', [NotificationController::class, 'index']);
     Route::post('notifications/{notification}/read', [NotificationController::class, 'read']);
