@@ -34,7 +34,7 @@ export default function SettingsPage() {
         enabled: group !== 'demo_data',
     });
 
-    const [values, setValues] = useState<Record<string, string | null>>({});
+    const [values, setValues] = useState<Record<string, any>>({});
     const [logoFile, setLogoFile] = useState<File | null>(null);
     const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
@@ -44,13 +44,17 @@ export default function SettingsPage() {
 
     const save = useMutation({
         mutationFn: () => settingsApi.update(group as Exclude<SettingsGroup, 'demo_data'>, values),
-        onSuccess: () => queryClient.invalidateQueries({ queryKey: ['settings', group] }),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['settings_group', group] });
+            toast.success('Pengaturan berhasil disimpan.');
+        },
+        onError: () => toast.error('Gagal menyimpan pengaturan.'),
     });
 
     const uploadLogo = useMutation({
         mutationFn: (file: File) => settingsApi.uploadLogo(file),
         onSuccess: (data) => {
-            queryClient.invalidateQueries({ queryKey: ['settings', 'company'] });
+            queryClient.invalidateQueries({ queryKey: ['settings_group', 'company'] });
             setValues((prev) => ({ ...prev, logo: data.logo }));
             setLogoFile(null);
             setLogoPreview(null);
@@ -59,7 +63,7 @@ export default function SettingsPage() {
         onError: () => toast.error('Failed to upload logo.'),
     });
 
-    const update = (key: string, value: string) => setValues({ ...values, [key]: value });
+    const update = (key: string, value: any) => setValues((prev) => ({ ...prev, [key]: value }));
 
     const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const file = e.target.files?.[0] ?? null;
@@ -333,6 +337,83 @@ function DemoDataSettings({ isDemo }: { isDemo?: boolean }) {
     );
 }
 
+function ImageUploadCard({
+    title,
+    description,
+    currentPath,
+    onUpload,
+    isUploading,
+    disabled,
+    placeholder,
+}: {
+    title: string;
+    description: string;
+    currentPath: string | null | undefined;
+    onUpload: (file: File) => void;
+    isUploading: boolean;
+    disabled?: boolean;
+    placeholder: string;
+}) {
+    const [selectedFile, setSelectedFile] = useState<File | null>(null);
+    const [preview, setPreview] = useState<string | null>(null);
+
+    const imageUrl = (() => {
+        const raw = preview || currentPath;
+        if (!raw) return null;
+        if (raw.startsWith('http') || raw.startsWith('data:')) return raw;
+        if (raw.startsWith('/storage/')) return raw;
+        return '/storage/' + raw;
+    })();
+
+    const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0] ?? null;
+        setSelectedFile(file);
+        if (file) setPreview(URL.createObjectURL(file));
+    };
+
+    const handleConfirm = () => {
+        if (!selectedFile) return;
+        onUpload(selectedFile);
+        setSelectedFile(null);
+        setPreview(null);
+    };
+
+    return (
+        <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-2xs space-y-3">
+            <div>
+                <h4 className="text-sm font-semibold text-gray-900">{title}</h4>
+                <p className="text-xs text-gray-500 mt-0.5">{description}</p>
+            </div>
+            <div className="flex items-center gap-4">
+                <div className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center p-1.5 overflow-hidden shrink-0">
+                    {imageUrl ? (
+                        <img src={imageUrl} alt={title} className="max-h-full max-w-full object-contain" />
+                    ) : (
+                        <span className="text-[10px] text-gray-400 text-center leading-tight">{placeholder}</span>
+                    )}
+                </div>
+                {!disabled && (
+                    <div className="space-y-2 flex-1">
+                        <Input type="file" accept="image/*" onChange={handleFile} />
+                        {selectedFile && (
+                            <Button
+                                type="button"
+                                size="sm"
+                                variant="secondary"
+                                disabled={isUploading}
+                                loading={isUploading}
+                                onClick={handleConfirm}
+                            >
+                                Simpan {title}
+                            </Button>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 function CompanyFields({
     values,
     update,
@@ -343,8 +424,8 @@ function CompanyFields({
     uploadLogoMutation,
     isDemo,
 }: {
-    values: Record<string, string | null>;
-    update: (key: string, value: string) => void;
+    values: Record<string, any>;
+    update: (key: string, value: any) => void;
     logoPreview: string | null;
     logoFile: File | null;
     onLogoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -352,61 +433,227 @@ function CompanyFields({
     uploadLogoMutation: any;
     isDemo?: boolean;
 }) {
+    const queryClient = useQueryClient();
+
+    const uploadSig = useMutation({
+        mutationFn: (file: File) => settingsApi.uploadSignature(file),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['settings_group', 'company'] });
+            update('signature', data.signature);
+            toast.success('Tanda tangan digital berhasil diunggah.');
+        },
+        onError: () => toast.error('Gagal mengunggah tanda tangan.'),
+    });
+
+    const uploadStamp = useMutation({
+        mutationFn: (file: File) => settingsApi.uploadStamp(file),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['settings_group', 'company'] });
+            update('stamp', data.stamp);
+            toast.success('Stempel perusahaan berhasil diunggah.');
+        },
+        onError: () => toast.error('Gagal mengunggah stempel.'),
+    });
+
+    const uploadQris = useMutation({
+        mutationFn: (file: File) => settingsApi.uploadQris(file),
+        onSuccess: (data) => {
+            queryClient.invalidateQueries({ queryKey: ['settings_group', 'company'] });
+            update('qris', data.qris);
+            toast.success('QRIS pembayaran berhasil diunggah.');
+        },
+        onError: () => toast.error('Gagal mengunggah QRIS.'),
+    });
+
     const logoUrl = (() => {
         const raw = logoPreview || values.logo;
         if (!raw) return null;
-        if (raw.startsWith('http')) return raw;
+        if (raw.startsWith('http') || raw.startsWith('data:')) return raw;
         if (raw.startsWith('/storage/')) return raw;
         return '/storage/' + raw;
     })();
 
     return (
-        <div className="space-y-4">
-            <div className="space-y-1">
-                <span className="block text-sm font-medium text-gray-700">Logo</span>
+        <div className="space-y-6">
+            {/* Logo */}
+            <div className="border border-gray-200 rounded-xl p-4 bg-white shadow-2xs space-y-3">
+                <div>
+                    <h4 className="text-sm font-semibold text-gray-900">Logo Perusahaan</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">Logo resmi yang ditampilkan di kop surat invoice dan penawaran.</p>
+                </div>
                 <div className="flex items-center gap-4">
-                    <div className="w-16 h-16 border rounded-lg overflow-hidden bg-gray-50 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-200 bg-gray-50 flex items-center justify-center p-1.5 overflow-hidden shrink-0">
                         {logoUrl ? (
-                            <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                            <img src={logoUrl} alt="Logo" className="max-h-full max-w-full object-contain" />
                         ) : (
-                            <span className="text-xs text-gray-400">No logo</span>
+                            <span className="text-[10px] text-gray-400 text-center leading-tight">Belum Ada Logo</span>
                         )}
                     </div>
                     {!isDemo && (
-                        <div className="space-y-2">
+                        <div className="space-y-2 flex-1">
                             <Input type="file" accept="image/*" onChange={onLogoChange} />
-                            <Button
-                                type="button"
-                                size="sm"
-                                variant="secondary"
-                                disabled={!logoFile || uploadLogoMutation.isPending}
-                                loading={uploadLogoMutation.isPending}
-                                onClick={onUploadLogo}
-                            >
-                                Upload Logo
-                            </Button>
+                            {logoFile && (
+                                <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="secondary"
+                                    disabled={uploadLogoMutation.isPending}
+                                    loading={uploadLogoMutation.isPending}
+                                    onClick={onUploadLogo}
+                                >
+                                    Simpan Logo
+                                </Button>
+                            )}
                         </div>
                     )}
                 </div>
             </div>
-            <Field label="Company name">
-                <Input disabled={isDemo} value={values.name ?? ''} onChange={(e) => update('name', e.target.value)} />
-            </Field>
-            <Field label="Email">
-                <Input disabled={isDemo} type="email" value={values.email ?? ''} onChange={(e) => update('email', e.target.value)} />
-            </Field>
-            <Field label="Phone">
-                <Input disabled={isDemo} value={values.phone ?? ''} onChange={(e) => update('phone', e.target.value)} />
-            </Field>
-            <Field label="Website">
-                <Input disabled={isDemo} value={values.website ?? ''} onChange={(e) => update('website', e.target.value)} />
-            </Field>
-            <Field label="Address">
-                <Textarea disabled={isDemo} value={values.address ?? ''} onChange={(e) => update('address', e.target.value)} />
-            </Field>
-            <Field label="Tax number">
-                <Input disabled={isDemo} value={values.tax_number ?? ''} onChange={(e) => update('tax_number', e.target.value)} />
-            </Field>
+
+            {/* Basic Info */}
+            <div className="space-y-4">
+                <h4 className="text-sm font-semibold text-gray-900">Identitas & Kontak Bisnis</h4>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Field label="Nama Perusahaan">
+                        <Input disabled={isDemo} value={values.name ?? ''} onChange={(e) => update('name', e.target.value)} />
+                    </Field>
+                    <Field label="Email Bisnis">
+                        <Input disabled={isDemo} type="email" value={values.email ?? ''} onChange={(e) => update('email', e.target.value)} />
+                    </Field>
+                    <Field label="No. Telepon">
+                        <Input disabled={isDemo} value={values.phone ?? ''} onChange={(e) => update('phone', e.target.value)} />
+                    </Field>
+                    <Field label="Website">
+                        <Input disabled={isDemo} value={values.website ?? ''} onChange={(e) => update('website', e.target.value)} />
+                    </Field>
+                    <Field label="NPWP / Tax ID">
+                        <Input disabled={isDemo} value={values.tax_number ?? ''} onChange={(e) => update('tax_number', e.target.value)} />
+                    </Field>
+                    <Field label="Kota">
+                        <Input disabled={isDemo} value={values.city ?? ''} onChange={(e) => update('city', e.target.value)} placeholder="Contoh: Jakarta Selatan" />
+                    </Field>
+                </div>
+                <Field label="Alamat Kantor">
+                    <Textarea disabled={isDemo} value={values.address ?? ''} onChange={(e) => update('address', e.target.value)} />
+                </Field>
+            </div>
+
+            {/* Legal Signatory & Stamps */}
+            <div className="pt-4 border-t border-gray-200 space-y-4">
+                <div>
+                    <h4 className="text-sm font-semibold text-gray-900">Legalitas Dokumen & Otorisasi</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">Penandatangan resmi dan stempel perusahaan untuk keabsahan hukum pada PDF.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Field label="Nama Penandatangan Resmi" hint="Nama lengkap pejabat yang berwenang menandatangani tagihan">
+                        <Input disabled={isDemo} value={values.authorized_signer_name ?? ''} onChange={(e) => update('authorized_signer_name', e.target.value)} placeholder="Contoh: Budi Santoso, S.Kom" />
+                    </Field>
+                    <Field label="Jabatan Penandatangan" hint="Jabatan resmi dalam perusahaan">
+                        <Input disabled={isDemo} value={values.authorized_signer_title ?? ''} onChange={(e) => update('authorized_signer_title', e.target.value)} placeholder="Contoh: Direktur Utama / Finance Manager" />
+                    </Field>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <ImageUploadCard
+                        title="Tanda Tangan Digital"
+                        description="Unggah file tanda tangan transparan (PNG/JPG)."
+                        currentPath={values.signature}
+                        onUpload={(f) => uploadSig.mutate(f)}
+                        isUploading={uploadSig.isPending}
+                        disabled={isDemo}
+                        placeholder="Belum Ada TTD"
+                    />
+                    <ImageUploadCard
+                        title="Stempel / Cap Resmi"
+                        description="Unggah cap stempel bulat/kotak perusahaan transparan (PNG)."
+                        currentPath={values.stamp}
+                        onUpload={(f) => uploadStamp.mutate(f)}
+                        isUploading={uploadStamp.isPending}
+                        disabled={isDemo}
+                        placeholder="Belum Ada Cap"
+                    />
+                </div>
+            </div>
+
+            {/* QRIS Fast Payment */}
+            <div className="pt-4 border-t border-gray-200 space-y-4">
+                <div>
+                    <h4 className="text-sm font-semibold text-gray-900">Barcode QRIS Pembayaran Cepat</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">Kode barcode QRIS (BCA, Mandiri, BRI, GoPay, OVO, ShopeePay) untuk scan bayar langsung dari PDF invoice.</p>
+                </div>
+                <ImageUploadCard
+                    title="Gambar Barcode QRIS"
+                    description="QRIS akan dicetak rapi berdampingan dengan rekening bank di bagian bawah PDF invoice."
+                    currentPath={values.qris}
+                    onUpload={(f) => uploadQris.mutate(f)}
+                    isUploading={uploadQris.isPending}
+                    disabled={isDemo}
+                    placeholder="Scan QRIS Belum Ada"
+                />
+            </div>
+
+            {/* PDF Appearance Toggles */}
+            <div className="pt-4 border-t border-gray-200 space-y-3">
+                <div>
+                    <h4 className="text-sm font-semibold text-gray-900">Opsi Tampilan Dokumen PDF</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">Pilih elemen yang otomatis dicetak pada lembar PDF tagihan.</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors bg-white">
+                        <input
+                            type="checkbox"
+                            disabled={isDemo}
+                            checked={Boolean(values.show_signature_on_pdf ?? true)}
+                            onChange={(e) => update('show_signature_on_pdf', e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <div>
+                            <span className="text-sm font-medium text-gray-900 block">Tanda Tangan Digital</span>
+                            <span className="text-xs text-gray-500">Cetak tanda tangan otorisasi penandatangan di sudut kanan bawah invoice.</span>
+                        </div>
+                    </label>
+
+                    <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors bg-white">
+                        <input
+                            type="checkbox"
+                            disabled={isDemo}
+                            checked={Boolean(values.show_stamp_on_pdf ?? true)}
+                            onChange={(e) => update('show_stamp_on_pdf', e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <div>
+                            <span className="text-sm font-medium text-gray-900 block">Stempel / Cap Resmi</span>
+                            <span className="text-xs text-gray-500">Cetak stempel perusahaan di samping tanda tangan sebagai bukti validitas.</span>
+                        </div>
+                    </label>
+
+                    <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors bg-white">
+                        <input
+                            type="checkbox"
+                            disabled={isDemo}
+                            checked={Boolean(values.show_qris_on_pdf ?? true)}
+                            onChange={(e) => update('show_qris_on_pdf', e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <div>
+                            <span className="text-sm font-medium text-gray-900 block">QRIS Pembayaran Cepat</span>
+                            <span className="text-xs text-gray-500">Tampilkan barcode QRIS di kotak instruksi pembayaran PDF invoice.</span>
+                        </div>
+                    </label>
+
+                    <label className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors bg-white">
+                        <input
+                            type="checkbox"
+                            disabled={isDemo}
+                            checked={Boolean(values.show_paid_watermark ?? true)}
+                            onChange={(e) => update('show_paid_watermark', e.target.checked)}
+                            className="mt-1 h-4 w-4 rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+                        />
+                        <div>
+                            <span className="text-sm font-medium text-gray-900 block">Watermark "LUNAS / PAID"</span>
+                            <span className="text-xs text-gray-500">Cetak watermark stempel besar miring saat invoice berstatus Paid (Lunas).</span>
+                        </div>
+                    </label>
+                </div>
+            </div>
         </div>
     );
 }
@@ -418,8 +665,8 @@ function GroupFields({
     isDemo,
 }: {
     group: Exclude<SettingsGroup, 'company' | 'demo_data'>;
-    values: Record<string, string | null>;
-    update: (key: string, value: string) => void;
+    values: Record<string, any>;
+    update: (key: string, value: any) => void;
     isDemo?: boolean;
 }) {
     if (group === 'invoice')

@@ -12,6 +12,7 @@ class Quote extends Model
     protected $fillable = [
         'company_id',
         'quote_number',
+        'public_token',
         'customer_id',
         'quote_date',
         'valid_until',
@@ -41,6 +42,15 @@ class Quote extends Model
         'is_demo' => 'boolean',
     ];
 
+    protected static function booted(): void
+    {
+        static::creating(function (Quote $quote) {
+            if (empty($quote->public_token)) {
+                $quote->public_token = \Illuminate\Support\Str::random(32);
+            }
+        });
+    }
+
     public function company()
     {
         return $this->belongsTo(Company::class);
@@ -59,6 +69,11 @@ class Quote extends Model
     public function invoice()
     {
         return $this->belongsTo(Invoice::class);
+    }
+
+    public function milestones()
+    {
+        return $this->hasMany(QuoteMilestone::class)->orderBy('sequence');
     }
 
     public static function generateQuoteNumber(int $companyId): string

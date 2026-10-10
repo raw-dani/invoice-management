@@ -20,9 +20,15 @@ class PdfService
         $invoice->loadMissing(['customer', 'items.product', 'company']);
         $company = $invoice->company ?? $this->resolveCompany();
 
+        $bankKeys = ['bank_name', 'account_name', 'account_number', 'instructions'];
+        $bank = \App\Models\Setting::where('company_id', $invoice->company_id)
+            ->whereIn('key', $bankKeys)
+            ->pluck('value', 'key');
+
         return Pdf::loadView($this->invoiceView($invoice->company_id, $template), [
             'invoice' => $invoice,
             'company' => $company,
+            'bank'    => $bank,
             'type'    => 'Invoice',
         ])
             ->setPaper('a4', 'portrait')

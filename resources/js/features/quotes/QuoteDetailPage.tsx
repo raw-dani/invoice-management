@@ -18,6 +18,8 @@ import { formatMoney, formatDate } from '../../lib/utils';
 import { useState } from 'react';
 import toast from '../../lib/toast';
 import { downloadPdf, openPdfInNewTab, pdfUrls } from '../../lib/pdf';
+import { WhatsAppShareModal } from '../../components/WhatsAppShareModal';
+import { QuoteMilestoneSection } from './QuoteMilestoneSection';
 import type { ActivityLog } from '../../types';
 
 export default function QuoteDetailPage() {
@@ -26,6 +28,7 @@ export default function QuoteDetailPage() {
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [confirmConvert, setConfirmConvert] = useState(false);
     const [showActivity, setShowActivity] = useState(false);
+    const [whatsappOpen, setWhatsappOpen] = useState(false);
 
     const { data: quote, isLoading } = useQuote(Number(id));
     const sendQuote = useSendQuote();
@@ -54,6 +57,25 @@ export default function QuoteDetailPage() {
                 actions={
                     <>
                         <StatusBadge status={quote.status} />
+                        <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                            onClick={() => setWhatsappOpen(true)}
+                        >
+                            💬 WhatsApp
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                                const url = `${window.location.origin}/q/${quote.public_token || quote.id}`;
+                                navigator.clipboard.writeText(url);
+                                toast.success('Tautan Portal Penawaran berhasil disalin!');
+                            }}
+                            title="Salin tautan portal klien publik"
+                        >
+                            🔗 Portal Klien
+                        </Button>
                         <Button
                             size="sm"
                             variant="secondary"
@@ -192,6 +214,9 @@ export default function QuoteDetailPage() {
                 )}
             </div>
 
+            {/* Project Milestones / Termin Billing */}
+            <QuoteMilestoneSection quote={quote} />
+
             <Card className="mt-6">
                 <CardHeader>
                     <div className="flex justify-between items-center">
@@ -306,6 +331,23 @@ export default function QuoteDetailPage() {
                 }}
                 onCancel={() => setConfirmDelete(false)}
                 danger
+            />
+
+            <WhatsAppShareModal
+                open={whatsappOpen}
+                onClose={() => setWhatsappOpen(false)}
+                data={{
+                    entityType: 'quote',
+                    id: quote.id,
+                    number: quote.quote_number,
+                    total: quote.total,
+                    currency: quote.currency,
+                    date: quote.quote_date,
+                    dueDate: quote.valid_until || undefined,
+                    customerName: quote.customer?.company_name || 'Pelanggan',
+                    customerPhone: quote.customer?.phone,
+                    publicToken: quote.public_token,
+                }}
             />
         </>
     );

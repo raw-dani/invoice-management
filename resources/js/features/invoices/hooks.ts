@@ -90,3 +90,29 @@ export function useSendInvoiceEmail() {
         onSuccess: () => qc.invalidateQueries({ queryKey: invoiceKeys.all }),
     });
 }
+
+export function useApproveProof() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, data }: { id: number; data?: { amount?: number; payment_method?: string; admin_notes?: string } }) =>
+            invoicesApi.approveProof(id, data),
+        onSuccess: (_, vars) => {
+            qc.invalidateQueries({ queryKey: invoiceKeys.all });
+            qc.invalidateQueries({ queryKey: invoiceKeys.detail(vars.id) });
+            qc.invalidateQueries({ queryKey: ['dashboard'] });
+            qc.invalidateQueries({ queryKey: ['payments'] });
+        },
+    });
+}
+
+export function useRejectProof() {
+    const qc = useQueryClient();
+    return useMutation({
+        mutationFn: ({ id, reason }: { id: number; reason?: string }) =>
+            invoicesApi.rejectProof(id, { reason }),
+        onSuccess: (_, vars) => {
+            qc.invalidateQueries({ queryKey: invoiceKeys.all });
+            qc.invalidateQueries({ queryKey: invoiceKeys.detail(vars.id) });
+        },
+    });
+}

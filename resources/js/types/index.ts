@@ -172,6 +172,7 @@ export interface Invoice {
     subscription_id: number | null;
     quote_id: number | null;
     invoice_number: string;
+    public_token?: string;
     invoice_date: string;
     due_date: string;
     status: 'draft' | 'sent' | 'partially_paid' | 'paid' | 'overdue' | 'cancelled' | 'void';
@@ -187,11 +188,33 @@ export interface Invoice {
     currency: string;
     notes: string | null;
     terms: string | null;
+    payment_proof_path?: string | null;
+    payment_proof_status?: 'none' | 'pending' | 'approved' | 'rejected';
+    payment_proof_notes?: string | null;
+    payment_proof_uploaded_at?: string | null;
+    milestone_name?: string | null;
+    milestone_sequence?: number | null;
+    milestone_total_termins?: number | null;
+    milestone_percentage?: number | null;
     customer?: Customer;
     items?: InvoiceItem[];
     payments?: Payment[];
     created_at: string;
     updated_at: string;
+}
+
+export interface QuoteMilestone {
+    id: number;
+    sequence: number;
+    name: string;
+    percentage: number;
+    amount: number;
+    due_date: string | null;
+    status: 'pending' | 'invoiced' | 'paid';
+    notes: string | null;
+    invoice_id: number | null;
+    invoice_number?: string | null;
+    invoice_status?: string | null;
 }
 
 export interface QuoteItem {
@@ -239,6 +262,7 @@ export interface Quote {
     customer_id: number;
     invoice_id: number | null;
     quote_number: string;
+    public_token?: string;
     quote_date: string;
     valid_until: string | null;
     status: 'draft' | 'sent' | 'viewed' | 'accepted' | 'rejected' | 'expired' | 'converted';
@@ -254,6 +278,7 @@ export interface Quote {
     terms: string | null;
     customer?: Customer;
     items?: QuoteItem[];
+    milestones?: QuoteMilestone[];
     created_at: string;
     updated_at: string;
 }

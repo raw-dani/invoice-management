@@ -6,6 +6,8 @@ import {
     useDeleteInvoice,
     useDuplicateInvoice,
     useSendInvoiceEmail,
+    useApproveProof,
+    useRejectProof,
 } from './hooks';
 import { useDeletePayment } from '../payments/hooks';
 import { useEntityActivityLogs } from '../activity/hooks';
@@ -17,6 +19,7 @@ import { useState } from 'react';
 import toast from '../../lib/toast';
 import { RecordPaymentForm } from '../payments/RecordPaymentForm';
 import { downloadPdf, openPdfInNewTab, pdfUrls } from '../../lib/pdf';
+import { WhatsAppShareModal } from '../../components/WhatsAppShareModal';
 import type { ActivityLog } from '../../types';
 
 export default function InvoiceDetailPage() {
@@ -27,6 +30,10 @@ export default function InvoiceDetailPage() {
     const [paymentOpen, setPaymentOpen] = useState(false);
     const [paymentToDelete, setPaymentToDelete] = useState<number | null>(null);
     const [showActivity, setShowActivity] = useState(false);
+    const [whatsappOpen, setWhatsappOpen] = useState(false);
+    const [confirmApproveProof, setConfirmApproveProof] = useState(false);
+    const [confirmRejectProof, setConfirmRejectProof] = useState(false);
+    const [rejectReason, setRejectReason] = useState('');
 
     const { data: invoice, isLoading } = useInvoice(Number(id));
     const markSent = useMarkInvoiceSent();
@@ -35,6 +42,8 @@ export default function InvoiceDetailPage() {
     const deletePayment = useDeletePayment();
     const duplicateInvoice = useDuplicateInvoice();
     const sendEmail = useSendInvoiceEmail();
+    const approveProof = useApproveProof();
+    const rejectProof = useRejectProof();
     const { data: activityData } = useEntityActivityLogs('Invoice', Number(id));
 
     if (isLoading) return <div>Loading...</div>;
@@ -51,6 +60,25 @@ export default function InvoiceDetailPage() {
                     actions={
                     <>
                         <StatusBadge status={invoice.status} />
+                        <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                            onClick={() => setWhatsappOpen(true)}
+                        >
+                            💬 WhatsApp
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => {
+                                const url = `${window.location.origin}/i/${invoice.public_token || invoice.id}`;
+                                navigator.clipboard.writeText(url);
+                                toast.success('Tautan Portal Klien berhasil disalin!');
+                            }}
+                            title="Salin tautan portal klien publik"
+                        >
+                            🔗 Portal Klien
+                        </Button>
                         <Button
                             size="sm"
                             variant="secondary"
@@ -124,6 +152,93 @@ export default function InvoiceDetailPage() {
                     </>
                 }
             />
+
+            {/* Payment Proof Pending Review Banner */}
+            {invoice.payment_proof_status === 'pending' && (
+                <div className="mb-6 p-4 rounded-xl bg-amber-50 border border-amber-300 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div className="flex items-center gap-3">
+                        <span className="text-2xl">🔔</span>
+                        <div>
+                            <h4 className="font-semibold text-sm text-amber-900">
+                                Bukti Pembayaran Diterima dari Klien
+                            </h4>
+                            <p className="text-xs text-amber-800 mt-0.5">
+                                Klien mengunggah bukti transfer {invoice.payment_proof_uploaded_at ? `pada ${formatDate(invoice.payment_proof_uploaded_at)}` : ''}.
+                                {invoice.payment_proof_notes && <span className="block italic mt-0.5">Catatan klien: "{invoice.payment_proof_notes}"</span>}
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                        {invoice.payment_proof_path && (
+                            <a
+                                href={invoice.payment_proof_path}
+                                target="_blank"
+                                rel="noreferrer"
+                                className="inline-flex items-center text-xs font-semibold text-indigo-700 bg-white border border-indigo-200 px-3 py-1.5 rounded-md hover:bg-indigo-50 shadow-2xs"
+                            >
+                                👁️ Lihat Bukti Transfer
+                            </a>
+                        )}
+                        <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                            loading={approveProof.isPending}
+                            onClick={() => setConfirmApproveProof(true)}
+                        >
+                            ✓ Setujui & Tandai Lunas
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="danger"
+                            loading={rejectProof.isPending}
+                            onClick={() => setConfirmRejectProof(true)}
+                        >
+                            ✗ Tolak Bukti
+                        </Button>
+                    </div>
+                </div>
+            )}
+
+            {invoice.payment_proof_status === 'rejected' && (
+                <div className="mb-6 p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800">
+                    <strong>Bukti Pembayaran Ditolak:</strong> {invoice.payment_proof_notes || 'Bukti transfer sebelumnya ditolak oleh admin.'}
+                </div>
+            )}
+
+            {invoice.milestone_name && (
+                <div className="mb-6 p-4 rounded-xl bg-indigo-50/70 border border-indigo-200 text-indigo-950 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-indigo-600 text-white flex items-center justify-center font-bold text-base shrink-0">
+                            {invoice.milestone_sequence || '🎯'}
+                        </div>
+                        <div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-bold uppercase tracking-wider text-indigo-600">
+                                    Tagihan Proyek Bertermin {invoice.milestone_sequence && invoice.milestone_total_termins ? `(Tahap ${invoice.milestone_sequence} dari ${invoice.milestone_total_termins})` : ''}
+                                </span>
+                                {invoice.milestone_percentage && (
+                                    <span className="px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-100 text-indigo-800">
+                                        Bobot {invoice.milestone_percentage}%
+                                    </span>
+                                )}
+                            </div>
+                            <h4 className="font-semibold text-sm text-gray-900 mt-0.5">
+                                {invoice.milestone_name}
+                            </h4>
+                        </div>
+                    </div>
+                    {invoice.quote_id && (
+                        <Link
+                            to={`/quotes/${invoice.quote_id}`}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-indigo-700 bg-white border border-indigo-200 px-3 py-1.5 rounded-lg hover:bg-indigo-50 shadow-2xs transition-colors self-start sm:self-center"
+                        >
+                            <span>Lihat Penawaran Proyek</span>
+                            <span>&rarr;</span>
+                        </Link>
+                    )}
+                </div>
+            )}
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <Card className="lg:col-span-2">
@@ -304,10 +419,58 @@ export default function InvoiceDetailPage() {
                 danger
             />
 
+            <ConfirmDialog
+                open={confirmApproveProof}
+                title="Setujui Bukti Pembayaran?"
+                message={`Anda akan menyetujui bukti pembayaran dari klien dan mencatat pembayaran lunas untuk invoice ${invoice.invoice_number} sejumlah ${formatMoney(invoice.balance, invoice.currency)}.`}
+                confirmText="Ya, Setujui & Catat Lunas"
+                cancelText="Batal"
+                onConfirm={async () => {
+                    await approveProof.mutateAsync({ id: invoice.id });
+                    setConfirmApproveProof(false);
+                    toast.success('Bukti pembayaran disetujui & pembayaran dicatat!');
+                }}
+                onCancel={() => setConfirmApproveProof(false)}
+            />
+
+            <ConfirmDialog
+                open={confirmRejectProof}
+                title="Tolak Bukti Pembayaran?"
+                message="Apakah Anda yakin ingin menolak bukti transfer ini? Klien akan diminta mengunggah ulang bukti pembayaran yang valid."
+                confirmText="Tolak Bukti"
+                cancelText="Batal"
+                danger
+                onConfirm={async () => {
+                    await rejectProof.mutateAsync({ id: invoice.id, reason: rejectReason || 'Bukti pembayaran tidak sesuai' });
+                    setConfirmRejectProof(false);
+                    setRejectReason('');
+                    toast.info('Bukti transfer ditolak.');
+                }}
+                onCancel={() => setConfirmRejectProof(false)}
+            />
+
             <RecordPaymentForm
                 open={paymentOpen}
                 onClose={() => setPaymentOpen(false)}
                 invoice={invoice}
+            />
+
+            <WhatsAppShareModal
+                open={whatsappOpen}
+                onClose={() => setWhatsappOpen(false)}
+                data={{
+                    entityType: 'invoice',
+                    id: invoice.id,
+                    number: invoice.invoice_number,
+                    total: invoice.total,
+                    balance: invoice.balance,
+                    currency: invoice.currency,
+                    date: invoice.invoice_date,
+                    dueDate: invoice.due_date,
+                    customerName: invoice.customer?.company_name || 'Pelanggan',
+                    customerPhone: invoice.customer?.phone,
+                    publicToken: invoice.public_token,
+                }}
             />
         </>
     );

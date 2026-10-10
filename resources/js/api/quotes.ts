@@ -53,6 +53,10 @@ export const quotesApi = {
         api.post<{ data: Invoice }>(`/quotes/${id}/convert-to-invoice`).then((r) => r.data.data),
     duplicate: (id: number) =>
         api.post<{ data: Quote }>(`/quotes/${id}/duplicate`).then((r) => r.data.data),
+    saveMilestones: (id: number, milestones: Array<{ name: string; percentage: number; due_date?: string | null; notes?: string | null }>) =>
+        api.post<{ message: string; data: Quote }>(`/quotes/${id}/milestones`, { milestones }).then((r) => r.data),
+    generateMilestoneInvoice: (quoteId: number, milestoneId: number) =>
+        api.post<{ message: string; data: Invoice }>(`/quotes/${quoteId}/milestones/${milestoneId}/generate-invoice`).then((r) => r.data),
     sendEmail: (id: number, data?: { to?: string; subject?: string; message?: string }) =>
         api.post<{ success: boolean; message: string }>(`/quotes/${id}/email`, data).then((r) => r.data),
 };

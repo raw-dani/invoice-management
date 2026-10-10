@@ -102,6 +102,107 @@ class ReportController extends Controller
         ]]);
     }
 
+    public function arAging(Request $request): JsonResponse
+    {
+        $companyId = auth()->user()->company_id;
+        $today = Carbon::today();
+
+        // Get all unpaid invoices with positive balance
+        $invoices = Invoice::with('customer')
+            ->where('company_id', $companyId)
+            ->where('balance', '>', 0)
+            ->whereNotIn('status', ['draft', 'cancelled', 'void'])
+            ->orderBy('due_date')
+            ->get();
+
+        $summary = [
+            'total_receivables' => 0.0,
+            'current'           => 0.0,
+            'days_1_30'         => 0.0,
+            'days_31_60'        => 0.0,
+            'days_61_90'        => 0.0,
+            'days_over_90'      => 0.0,
+            'invoice_count'     => $invoices->count(),
+            'customer_count'    => 0,
+        ];
+
+        $customerMap = [];
+
+        foreach ($invoices as $inv) {
+            $balance = (float) $inv->balance;
+            $summary['total_receivables'] += $balance;
+
+            $dueDate = Carbon::parse($inv->due_date);
+            $daysOverdue = $today->gt($dueDate) ? $dueDate->diffInDays($today) : 0;
+
+            $bucket = 'current';
+            if ($daysOverdue > 90) {
+                $bucket = 'days_over_90';
+            } elseif ($daysOverdue > 60) {
+                $bucket = 'days_61_90';
+            } elseif ($daysOverdue > 30) {
+                $bucket = 'days_31_60';
+            } elseif ($daysOverdue > 0) {
+                $bucket = 'days_1_30';
+            }
+
+            $summary[$bucket] += $balance;
+
+            $cid = $inv->customer_id;
+            if (!isset($customerMap[$cid])) {
+                $customerMap[$cid] = [
+                    'customer_id'    => $cid,
+                    'customer_name'  => $inv->customer->company_name ?? 'Pelanggan Tidak Diketahui',
+                    'contact_name'   => $inv->customer->contact_name ?? null,
+                    'phone'          => $inv->customer->phone ?? null,
+                    'email'          => $inv->customer->email ?? null,
+                    'total_balance'  => 0.0,
+                    'current'        => 0.0,
+                    'days_1_30'      => 0.0,
+                    'days_31_60'     => 0.0,
+                    'days_61_90'     => 0.0,
+                    'days_over_90'   => 0.0,
+                    'invoices_count' => 0,
+                    'oldest_due_date'=> $inv->due_date?->toDateString(),
+                    'invoices'       => [],
+                ];
+            }
+
+            $customerMap[$cid]['total_balance'] += $balance;
+            $customerMap[$cid][$bucket] += $balance;
+            $customerMap[$cid]['invoices_count']++;
+            $customerMap[$cid]['invoices'][] = [
+                'id'             => $inv->id,
+                'invoice_number' => $inv->invoice_number,
+                'due_date'       => $inv->due_date?->toDateString(),
+                'balance'        => $balance,
+                'days_overdue'   => $daysOverdue,
+                'bucket'         => $bucket,
+                'public_token'   => $inv->public_token,
+            ];
+        }
+
+        $summary['customer_count'] = count($customerMap);
+        $totalOverdue = $summary['days_1_30'] + $summary['days_31_60'] + $summary['days_61_90'] + $summary['days_over_90'];
+        $summary['total_overdue'] = $totalOverdue;
+        $summary['overdue_percentage'] = $summary['total_receivables'] > 0
+            ? round(($totalOverdue / $summary['total_receivables']) * 100, 1)
+            : 0;
+
+        $customerRows = collect($customerMap)
+            ->sortByDesc('total_balance')
+            ->values()
+            ->all();
+
+        return response()->json([
+            'data' => [
+                'as_of_date' => $today->toDateString(),
+                'summary'    => $summary,
+                'customers'  => $customerRows,
+            ],
+        ]);
+    }
+
     private function dateRange(Request $request): array
     {
         $from = $request->filled('from') ? Carbon::parse($request->input('from')) : today()->startOfYear();

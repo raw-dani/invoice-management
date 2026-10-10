@@ -1,19 +1,22 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { reportsApi, ReportFilters } from '../../api/reports';
+import { reportsApi, ReportFilters, ArAgingData, ArAgingCustomer } from '../../api/reports';
 import { Card, CardBody, CardHeader, EmptyState, PageHeader } from '../../components/ui/Display';
 import { Input, Select } from '../../components/ui/Form';
 import Button from '../../components/ui/Button';
 import { formatMoney, formatDate, statusBadgeClass } from '../../lib/utils';
 import { downloadPdf } from '../../lib/pdf';
 import toast from '../../lib/toast';
+import { WhatsAppShareModal, WhatsAppShareData } from '../../components/WhatsAppShareModal';
 
-type Tab = 'revenue' | 'invoices' | 'customers' | 'subscriptions';
+type Tab = 'revenue' | 'invoices' | 'ar_aging' | 'customers' | 'subscriptions';
 type DatePreset = 'this_month' | 'last_30' | 'this_quarter' | 'this_year' | 'all' | 'custom';
 
 const TABS: { key: Tab; label: string; icon: string }[] = [
     { key: 'revenue', label: 'Pendapatan', icon: '💰' },
     { key: 'invoices', label: 'Tagihan (Invoices)', icon: '📄' },
+    { key: 'ar_aging', label: 'Umur Piutang (AR Aging)', icon: '⏳' },
     { key: 'customers', label: 'Pelanggan', icon: '👥' },
     { key: 'subscriptions', label: 'Langganan', icon: '🔄' },
 ];
@@ -64,7 +67,11 @@ export default function ReportsPage() {
 
     const report = useQuery({
         queryKey: ['reports', tab, filters],
-        queryFn: () => (tab === 'subscriptions' ? reportsApi.subscriptions() : reportsApi[tab](filters)),
+        queryFn: () => {
+            if (tab === 'subscriptions') return reportsApi.subscriptions();
+            if (tab === 'ar_aging') return reportsApi.arAging();
+            return reportsApi[tab](filters);
+        },
     });
 
     const updateDate = (key: 'from' | 'to', value: string) => {
@@ -170,8 +177,8 @@ export default function ReportsPage() {
                 })}
             </div>
 
-            {/* Filter Bar with Presets & Date Inputs (Hidden for subscriptions tab) */}
-            {tab !== 'subscriptions' && (
+            {/* Filter Bar with Presets & Date Inputs (Hidden for subscriptions & ar_aging tab) */}
+            {tab !== 'subscriptions' && tab !== 'ar_aging' && (
                 <div className="bg-white rounded-xl shadow-xs border border-gray-200 p-4 space-y-3">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
                         {/* Quick Presets */}
@@ -258,6 +265,8 @@ export default function ReportsPage() {
                 <RevenueReport data={report.data} groupBy={filters.group_by ?? 'month'} />
             ) : tab === 'invoices' ? (
                 <InvoiceReport data={report.data} />
+            ) : tab === 'ar_aging' ? (
+                <ArAgingReport data={report.data} />
             ) : tab === 'customers' ? (
                 <CustomerReport data={report.data} />
             ) : (
@@ -1132,3 +1141,338 @@ function MetricCard({
         </Card>
     );
 }
+
+/* =========================================================================
+   5. AR AGING REPORT (LAPORAN UMUR PIUTANG USAHA & FOLLOW-UP WA)
+   ========================================================================= */
+function ArAgingReport({ data }: { data: any }) {
+    const agingData = data as ArAgingData | undefined;
+    const summary = agingData?.summary;
+    const customers = agingData?.customers ?? [];
+    const [search, setSearch] = useState('');
+    const [expandedCustomer, setExpandedCustomer] = useState<number | null>(null);
+    const [selectedWaData, setSelectedWaData] = useState<WhatsAppShareData | null>(null);
+
+    const filteredCustomers = customers.filter((c) =>
+        c.customer_name.toLowerCase().includes(search.toLowerCase()) ||
+        (c.contact_name && c.contact_name.toLowerCase().includes(search.toLowerCase())) ||
+        (c.phone && c.phone.includes(search))
+    );
+
+    const openWhatsAppForInvoice = (cust: ArAgingCustomer, inv: any) => {
+        setSelectedWaData({
+            entityType: 'invoice',
+            id: inv.id,
+            number: inv.invoice_number,
+            total: inv.balance,
+            balance: inv.balance,
+            currency: 'IDR',
+            date: inv.due_date,
+            dueDate: inv.due_date,
+            customerName: cust.customer_name,
+            customerPhone: cust.phone,
+            publicToken: inv.public_token,
+        });
+    };
+
+    const openWhatsAppForCustomer = (cust: ArAgingCustomer) => {
+        const targetInv = cust.invoices[0];
+        if (targetInv) {
+            openWhatsAppForInvoice(cust, targetInv);
+        }
+    };
+
+    if (!summary) {
+        return <EmptyState title="Data tidak tersedia" message="Belum ada data umur piutang." />;
+    }
+
+    const totalRec = summary.total_receivables || 1;
+    const pctCurrent = Math.round((summary.current / totalRec) * 100);
+    const pct1_30 = Math.round((summary.days_1_30 / totalRec) * 100);
+    const pct31_60 = Math.round((summary.days_31_60 / totalRec) * 100);
+    const pct61_90 = Math.round((summary.days_61_90 / totalRec) * 100);
+    const pctOver90 = Math.round((summary.days_over_90 / totalRec) * 100);
+
+    return (
+        <div className="space-y-6">
+            {/* Header / As of Date */}
+            <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-indigo-50/70 border border-indigo-100 rounded-xl gap-2">
+                <div>
+                    <h3 className="text-sm font-bold text-indigo-950 flex items-center gap-2">
+                        <span>⏳ Laporan Umur Piutang Usaha (Accounts Receivable Aging)</span>
+                        <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-200 text-indigo-900">
+                            Realtime
+                        </span>
+                    </h3>
+                    <p className="text-xs text-indigo-800 mt-0.5">
+                        Memantau kelancaran arus kas, jatuh tempo, dan tagihan tertunggak per tanggal <strong>{agingData?.as_of_date ? formatDate(agingData.as_of_date) : 'Hari Ini'}</strong>.
+                    </p>
+                </div>
+                <div className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-indigo-200 text-indigo-900 shadow-2xs">
+                    Tingkat Tertunggak: <strong className={summary.overdue_percentage > 25 ? 'text-red-600' : 'text-emerald-700'}>{summary.overdue_percentage}%</strong>
+                </div>
+            </div>
+
+            {/* Top Metric Cards */}
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                <MetricCard
+                    title="Total Piutang Aktif"
+                    value={formatMoney(summary.total_receivables, 'IDR')}
+                    badge={`${summary.invoice_count} Invoice (${summary.customer_count} Klien)`}
+                    badgeColor="bg-indigo-50 text-indigo-700 border-indigo-200"
+                    icon="💼"
+                />
+                <MetricCard
+                    title="Lancar / Current"
+                    value={formatMoney(summary.current, 'IDR')}
+                    badge={`Belum Jatuh Tempo (${pctCurrent}%)`}
+                    badgeColor="bg-emerald-50 text-emerald-700 border-emerald-200"
+                    icon="🟢"
+                />
+                <MetricCard
+                    title="1 - 30 Hari"
+                    value={formatMoney(summary.days_1_30, 'IDR')}
+                    badge={`Overdue Ringan (${pct1_30}%)`}
+                    badgeColor="bg-amber-50 text-amber-700 border-amber-200"
+                    icon="🟡"
+                />
+                <MetricCard
+                    title="31 - 60 Hari"
+                    value={formatMoney(summary.days_31_60, 'IDR')}
+                    badge={`Butuh Follow Up (${pct31_60}%)`}
+                    badgeColor="bg-orange-50 text-orange-700 border-orange-200"
+                    icon="🟠"
+                />
+                <MetricCard
+                    title="61 - 90 Hari"
+                    value={formatMoney(summary.days_61_90, 'IDR')}
+                    badge={`Risiko Tinggi (${pct61_90}%)`}
+                    badgeColor="bg-rose-50 text-rose-700 border-rose-200"
+                    icon="🔴"
+                />
+                <MetricCard
+                    title="> 90 Hari (Macet)"
+                    value={formatMoney(summary.days_over_90, 'IDR')}
+                    badge={`Kritis (${pctOver90}%)`}
+                    badgeColor="bg-red-100 text-red-900 border-red-300"
+                    icon="⚠️"
+                />
+            </div>
+
+            {/* Visual Aging Bar */}
+            <Card>
+                <CardHeader>
+                    <div className="flex justify-between items-center">
+                        <h4 className="text-sm font-semibold text-gray-900">Distribusi Komposisi Umur Piutang</h4>
+                        <span className="text-xs text-gray-500 font-mono">100% dari Total Piutang</span>
+                    </div>
+                </CardHeader>
+                <CardBody className="space-y-3">
+                    <div className="w-full bg-gray-100 rounded-full h-4 overflow-hidden flex shadow-inner">
+                        {summary.current > 0 && (
+                            <div className="bg-emerald-500 h-4 transition-all" style={{ width: `${(summary.current / totalRec) * 100}%` }} title={`Lancar: ${formatMoney(summary.current, 'IDR')}`} />
+                        )}
+                        {summary.days_1_30 > 0 && (
+                            <div className="bg-amber-400 h-4 transition-all" style={{ width: `${(summary.days_1_30 / totalRec) * 100}%` }} title={`1-30 Hari: ${formatMoney(summary.days_1_30, 'IDR')}`} />
+                        )}
+                        {summary.days_31_60 > 0 && (
+                            <div className="bg-orange-400 h-4 transition-all" style={{ width: `${(summary.days_31_60 / totalRec) * 100}%` }} title={`31-60 Hari: ${formatMoney(summary.days_31_60, 'IDR')}`} />
+                        )}
+                        {summary.days_61_90 > 0 && (
+                            <div className="bg-rose-500 h-4 transition-all" style={{ width: `${(summary.days_61_90 / totalRec) * 100}%` }} title={`61-90 Hari: ${formatMoney(summary.days_61_90, 'IDR')}`} />
+                        )}
+                        {summary.days_over_90 > 0 && (
+                            <div className="bg-red-700 h-4 transition-all" style={{ width: `${(summary.days_over_90 / totalRec) * 100}%` }} title={`>90 Hari: ${formatMoney(summary.days_over_90, 'IDR')}`} />
+                        )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 text-xs pt-1 justify-center sm:justify-start">
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-emerald-500 inline-block" /> Lancar (Current)</span>
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-amber-400 inline-block" /> 1-30 Hari</span>
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-orange-400 inline-block" /> 31-60 Hari</span>
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-rose-500 inline-block" /> 61-90 Hari</span>
+                        <span className="flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm bg-red-700 inline-block" /> &gt; 90 Hari (Macet)</span>
+                    </div>
+                </CardBody>
+            </Card>
+
+            {/* Customer Aging Table */}
+            <Card>
+                <CardHeader>
+                    <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3">
+                        <div>
+                            <h4 className="text-sm font-semibold text-gray-900">Rincian Piutang Per Pelanggan</h4>
+                            <p className="text-xs text-gray-500 mt-0.5">Klik baris pelanggan untuk melihat rincian faktur dan reminder WhatsApp.</p>
+                        </div>
+                        <div className="w-full sm:w-64">
+                            <Input
+                                placeholder="Cari nama / telepon pelanggan..."
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="text-xs py-1.5 px-3 h-9"
+                            />
+                        </div>
+                    </div>
+                </CardHeader>
+
+                <CardBody className="p-0">
+                    <div className="overflow-x-auto">
+                        <table className="w-full text-xs">
+                            <thead className="bg-gray-50 text-gray-600 font-semibold border-b">
+                                <tr>
+                                    <th className="py-3 px-4 text-left">Nama Pelanggan</th>
+                                    <th className="py-3 px-4 text-right">Total Piutang</th>
+                                    <th className="py-3 px-3 text-right text-emerald-700">Lancar</th>
+                                    <th className="py-3 px-3 text-right text-amber-700">1 - 30 Hr</th>
+                                    <th className="py-3 px-3 text-right text-orange-700">31 - 60 Hr</th>
+                                    <th className="py-3 px-3 text-right text-rose-700">61 - 90 Hr</th>
+                                    <th className="py-3 px-3 text-right text-red-700">&gt; 90 Hr</th>
+                                    <th className="py-3 px-4 text-center">Tindakan</th>
+                                </tr>
+                            </thead>
+                            <tbody className="divide-y divide-gray-100">
+                                {filteredCustomers.length === 0 ? (
+                                    <tr>
+                                        <td colSpan={8} className="p-8 text-center text-gray-500">
+                                            Tidak ada data piutang ditemukan.
+                                        </td>
+                                    </tr>
+                                ) : (
+                                    filteredCustomers.map((c) => {
+                                        const isExpanded = expandedCustomer === c.customer_id;
+                                        return (
+                                            <tbody key={c.customer_id} className="border-b border-gray-100">
+                                                <tr
+                                                    className="hover:bg-indigo-50/40 cursor-pointer transition-colors"
+                                                    onClick={() => setExpandedCustomer(isExpanded ? null : c.customer_id)}
+                                                >
+                                                    <td className="py-3 px-4">
+                                                        <div className="font-semibold text-gray-900 flex items-center gap-1.5">
+                                                            <span className="text-gray-400 text-[10px]">{isExpanded ? '▼' : '▶'}</span>
+                                                            <span>{c.customer_name}</span>
+                                                        </div>
+                                                        <div className="text-[11px] text-gray-500 pl-4 mt-0.5">
+                                                            {c.contact_name ? `${c.contact_name} · ` : ''}{c.phone || c.email || '-'}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4 text-right font-bold text-gray-900 font-mono">
+                                                        {formatMoney(c.total_balance, 'IDR')}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right font-mono text-emerald-700 font-medium">
+                                                        {c.current > 0 ? formatMoney(c.current, 'IDR') : '-'}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right font-mono text-amber-700 font-medium">
+                                                        {c.days_1_30 > 0 ? formatMoney(c.days_1_30, 'IDR') : '-'}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right font-mono text-orange-700 font-medium">
+                                                        {c.days_31_60 > 0 ? formatMoney(c.days_31_60, 'IDR') : '-'}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right font-mono text-rose-700 font-medium">
+                                                        {c.days_61_90 > 0 ? formatMoney(c.days_61_90, 'IDR') : '-'}
+                                                    </td>
+                                                    <td className="py-3 px-3 text-right font-mono text-red-700 font-bold">
+                                                        {c.days_over_90 > 0 ? formatMoney(c.days_over_90, 'IDR') : '-'}
+                                                    </td>
+                                                    <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
+                                                        <Button
+                                                            size="sm"
+                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-2.5 py-1"
+                                                            onClick={() => openWhatsAppForCustomer(c)}
+                                                            title="Kirim pengingat WhatsApp ke pelanggan ini"
+                                                        >
+                                                            💬 WhatsApp
+                                                        </Button>
+                                                    </td>
+                                                </tr>
+
+                                                {/* Expanded Invoices List */}
+                                                {isExpanded && (
+                                                    <tr className="bg-slate-50/80">
+                                                        <td colSpan={8} className="p-4 pl-8">
+                                                            <div className="bg-white rounded-lg border border-gray-200 p-3 shadow-2xs space-y-2">
+                                                                <div className="text-xs font-semibold text-gray-700">
+                                                                    Daftar Tagihan Belum Lunas ({c.invoices.length} Faktur):
+                                                                </div>
+                                                                <table className="w-full text-xs">
+                                                                    <thead>
+                                                                        <tr className="border-b text-gray-400 font-medium text-left">
+                                                                            <th className="py-1">No. Invoice</th>
+                                                                            <th className="py-1">Tgl Jatuh Tempo</th>
+                                                                            <th className="py-1">Keterlambatan</th>
+                                                                            <th className="py-1 text-right">Sisa Tagihan</th>
+                                                                            <th className="py-1 text-center">Follow Up</th>
+                                                                        </tr>
+                                                                    </thead>
+                                                                    <tbody className="divide-y divide-gray-100">
+                                                                        {c.invoices.map((inv) => (
+                                                                            <tr key={inv.id}>
+                                                                                <td className="py-1.5 font-medium">
+                                                                                    <Link
+                                                                                        to={`/invoices/${inv.id}`}
+                                                                                        className="text-indigo-600 hover:underline font-mono"
+                                                                                    >
+                                                                                        {inv.invoice_number}
+                                                                                    </Link>
+                                                                                </td>
+                                                                                <td className="py-1.5 text-gray-600">
+                                                                                    {inv.due_date ? formatDate(inv.due_date) : '-'}
+                                                                                </td>
+                                                                                <td className="py-1.5">
+                                                                                    {inv.days_overdue > 0 ? (
+                                                                                        <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                                                                                            inv.days_overdue > 90
+                                                                                                ? 'bg-red-100 text-red-800'
+                                                                                                : inv.days_overdue > 60
+                                                                                                ? 'bg-rose-100 text-rose-800'
+                                                                                                : inv.days_overdue > 30
+                                                                                                ? 'bg-orange-100 text-orange-800'
+                                                                                                : 'bg-amber-100 text-amber-800'
+                                                                                        }`}>
+                                                                                            +{inv.days_overdue} Hari Overdue
+                                                                                        </span>
+                                                                                    ) : (
+                                                                                        <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-100 text-emerald-800">
+                                                                                            Lancar / Belum Tempo
+                                                                                        </span>
+                                                                                    )}
+                                                                                </td>
+                                                                                <td className="py-1.5 text-right font-mono font-bold text-gray-900">
+                                                                                    {formatMoney(inv.balance, 'IDR')}
+                                                                                </td>
+                                                                                <td className="py-1.5 text-center">
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => openWhatsAppForInvoice(c, inv)}
+                                                                                        className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
+                                                                                    >
+                                                                                        💬 Kirim WA Tagihan
+                                                                                    </button>
+                                                                                </td>
+                                                                            </tr>
+                                                                        ))}
+                                                                    </tbody>
+                                                                </table>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                )}
+                                            </tbody>
+                                        );
+                                    })
+                                )}
+                            </tbody>
+                        </table>
+                    </div>
+                </CardBody>
+            </Card>
+
+            {/* WhatsApp Share Modal */}
+            <WhatsAppShareModal
+                open={Boolean(selectedWaData)}
+                onClose={() => setSelectedWaData(null)}
+                data={selectedWaData}
+            />
+        </div>
+    );
+}
+

@@ -59,6 +59,11 @@ class InvoiceController extends Controller
             $invoice = Invoice::create([
                 'company_id'      => auth()->user()->company_id,
                 'customer_id'     => $data['customer_id'],
+                'quote_id'        => $data['quote_id'] ?? null,
+                'milestone_name'  => $data['milestone_name'] ?? null,
+                'milestone_sequence' => $data['milestone_sequence'] ?? null,
+                'milestone_total_termins' => $data['milestone_total_termins'] ?? null,
+                'milestone_percentage' => $data['milestone_percentage'] ?? null,
                 'invoice_number'  => Invoice::generateInvoiceNumber(auth()->user()->company_id),
                 'invoice_date'    => $data['invoice_date'],
                 'due_date'        => $data['due_date'],
@@ -139,7 +144,17 @@ class InvoiceController extends Controller
         $invoice->load('items');
 
         $duplicate = \Illuminate\Support\Facades\DB::transaction(function () use ($invoice): Invoice {
-            $copy = $invoice->replicate(['invoice_number', 'status', 'paid_amount', 'balance']);
+            $copy = $invoice->replicate([
+                'invoice_number',
+                'status',
+                'paid_amount',
+                'balance',
+                'public_token',
+                'proof_of_payment_path',
+                'payment_proof_status',
+                'payment_proof_uploaded_at',
+                'payment_proof_rejected_reason',
+            ]);
             $copy->invoice_number = Invoice::generateInvoiceNumber($invoice->company_id);
             $copy->invoice_date = now()->toDateString();
             $copy->due_date = now()->addDays(30)->toDateString();
@@ -233,5 +248,83 @@ class InvoiceController extends Controller
         }
 
         return response()->json(['data' => ['processed' => $processed, 'failed' => $failed]]);
+    }
+
+    public function approvePaymentProof(Request $request, Invoice $invoice): JsonResponse
+    {
+        $this->authorizeCompany($invoice);
+
+        if ($invoice->payment_proof_status !== 'pending') {
+            return response()->json(['message' => 'Tidak ada bukti pembayaran tertunda untuk diverifikasi.'], 422);
+        }
+
+        $amount = (float) $request->input('amount', $invoice->balance);
+        if ($amount <= 0 || $amount > (float) $invoice->balance) {
+            $amount = (float) $invoice->balance;
+        }
+
+        $payment = DB::transaction(function () use ($invoice, $amount, $request) {
+            $payment = \App\Models\Payment::create([
+                'company_id'     => $invoice->company_id,
+                'customer_id'    => $invoice->customer_id,
+                'invoice_id'     => $invoice->id,
+                'payment_number' => \App\Models\Payment::generatePaymentNumber($invoice->company_id),
+                'payment_date'   => now()->toDateString(),
+                'amount'         => $amount,
+                'currency'       => $invoice->currency,
+                'payment_method' => $request->input('payment_method', 'bank_transfer'),
+                'reference'      => 'Bukti Transfer: ' . $invoice->invoice_number,
+                'notes'          => $request->input('admin_notes', 'Diverifikasi dari unggahan bukti transfer klien: ' . ($invoice->payment_proof_notes ?? '')),
+            ]);
+
+            $transitioned = $invoice->applyPayment($amount);
+
+            $invoice->update([
+                'payment_proof_status' => 'approved',
+            ]);
+
+            if ($transitioned) {
+                \App\Events\InvoicePaid::dispatch($invoice->fresh());
+            }
+
+            ActivityLog::record(
+                'payment_proof.approved',
+                "Bukti pembayaran untuk invoice {$invoice->invoice_number} disetujui, pembayaran {$payment->payment_number} dibuat",
+                $invoice,
+                ['amount' => $amount, 'payment_id' => $payment->id]
+            );
+
+            return $payment;
+        });
+
+        return response()->json([
+            'message' => 'Bukti pembayaran disetujui dan pembayaran berhasil dicatat.',
+            'invoice' => new InvoiceResource($invoice->fresh()->load(['customer', 'items', 'payments'])),
+            'payment' => $payment,
+        ]);
+    }
+
+    public function rejectPaymentProof(Request $request, Invoice $invoice): JsonResponse
+    {
+        $this->authorizeCompany($invoice);
+
+        $reason = $request->input('reason', 'Bukti pembayaran tidak sesuai atau tidak valid.');
+
+        $invoice->update([
+            'payment_proof_status' => 'rejected',
+            'payment_proof_notes'  => ($invoice->payment_proof_notes ? $invoice->payment_proof_notes . " | " : "") . "Ditolak: " . $reason,
+        ]);
+
+        ActivityLog::record(
+            'payment_proof.rejected',
+            "Bukti pembayaran untuk invoice {$invoice->invoice_number} ditolak. Alasan: {$reason}",
+            $invoice,
+            ['reason' => $reason]
+        );
+
+        return response()->json([
+            'message' => 'Bukti pembayaran ditolak.',
+            'invoice' => new InvoiceResource($invoice->fresh()->load(['customer', 'items', 'payments'])),
+        ]);
     }
 }

@@ -18,6 +18,7 @@ use App\Http\Controllers\Api\CurrencyController;
 use App\Http\Controllers\Api\TaxRateController;
 use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\ProfileController;
+use App\Http\Controllers\Api\PublicPortalController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\UserController;
 use Illuminate\Http\Request;
@@ -30,6 +31,17 @@ use Illuminate\Support\Facades\Route;
 */
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
+
+// Public Client Portal
+Route::prefix('public')->group(function () {
+    Route::get('invoices/{token}', [PublicPortalController::class, 'showInvoice']);
+    Route::post('invoices/{token}/proof', [PublicPortalController::class, 'uploadInvoiceProof']);
+    Route::get('invoices/{token}/pdf', [PublicPortalController::class, 'downloadInvoicePdf']);
+    Route::get('quotes/{token}', [PublicPortalController::class, 'showQuote']);
+    Route::post('quotes/{token}/accept', [PublicPortalController::class, 'acceptQuote']);
+    Route::post('quotes/{token}/reject', [PublicPortalController::class, 'rejectQuote']);
+    Route::get('quotes/{token}/pdf', [PublicPortalController::class, 'downloadQuotePdf']);
+});
 
 // Public auth
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:auth');
@@ -64,6 +76,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('invoices/{invoice}/duplicate',   [InvoiceController::class, 'duplicate']);
     Route::get('invoices/{invoice}/pdf',          [InvoiceController::class, 'pdf']);
     Route::post('invoices/{invoice}/email',       [EmailController::class, 'sendInvoice']);
+    Route::post('invoices/{invoice}/approve-proof', [InvoiceController::class, 'approvePaymentProof']);
+    Route::post('invoices/{invoice}/reject-proof',  [InvoiceController::class, 'rejectPaymentProof']);
 
     // Payments
     Route::get('invoices/{invoice}/payments',     [PaymentController::class, 'index']);
@@ -80,6 +94,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('quotes/{quote}/mark-as-expired',       [QuoteController::class, 'markAsExpired']);
     Route::post('quotes/{quote}/duplicate',             [QuoteController::class, 'duplicate']);
     Route::post('quotes/{quote}/convert-to-invoice',    [QuoteController::class, 'convertToInvoice']);
+    Route::post('quotes/{quote}/milestones',            [QuoteController::class, 'saveMilestones']);
+    Route::post('quotes/{quote}/milestones/{milestone}/generate-invoice', [QuoteController::class, 'generateMilestoneInvoice']);
     Route::get('quotes/{quote}/pdf',                    [QuoteController::class, 'pdf']);
     Route::post('quotes/{quote}/email',                 [EmailController::class, 'sendQuote']);
 
@@ -108,6 +124,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('reports/invoices', [ReportController::class, 'invoices']);
     Route::get('reports/customers', [ReportController::class, 'customers']);
     Route::get('reports/subscriptions', [ReportController::class, 'subscriptions']);
+    Route::get('reports/ar-aging', [ReportController::class, 'arAging']);
     Route::get('reports/export/csv', [ReportController::class, 'exportCsv']);
     Route::get('reports/export/pdf', [ReportController::class, 'exportPdf']);
     Route::get('settings/demo-data/stats', [SettingsController::class, 'demoDataStats'])->middleware('role:owner,admin,demo');
@@ -119,7 +136,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('settings/{group}', [SettingsController::class, 'show']);
     Route::put('settings/{group}', [SettingsController::class, 'update'])->middleware('role:owner,admin');
     Route::post('settings/email/test', [SettingsController::class, 'testEmail'])->middleware('role:owner,admin');
-    Route::post('company/logo', [SettingsController::class, 'uploadLogo'])->middleware('role:owner,admin');
+    Route::post('company/logo',      [SettingsController::class, 'uploadLogo'])->middleware('role:owner,admin');
+    Route::post('company/signature', [SettingsController::class, 'uploadSignature'])->middleware('role:owner,admin');
+    Route::post('company/stamp',     [SettingsController::class, 'uploadStamp'])->middleware('role:owner,admin');
+    Route::post('company/qris',      [SettingsController::class, 'uploadQris'])->middleware('role:owner,admin');
     Route::get('currencies', [CurrencyController::class, 'index']);
     Route::get('tax-rates', [TaxRateController::class, 'index']);
     Route::get('search', [SearchController::class, 'index']);

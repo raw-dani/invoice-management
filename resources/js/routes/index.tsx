@@ -43,10 +43,14 @@ const SettingsPage = React.lazy(() => import('../features/settings/SettingsPage'
 const NotificationsPage = React.lazy(() => import('../features/notifications/NotificationsPage'));
 const UsersPage = React.lazy(() => import('../features/users/UsersPage'));
 const ProfilePage = React.lazy(() => import('../features/profile/ProfilePage'));
+const PublicInvoicePortalPage = React.lazy(() => import('../features/portal/PublicInvoicePortalPage'));
+const PublicQuotePortalPage = React.lazy(() => import('../features/portal/PublicQuotePortalPage'));
 
 export const router = createBrowserRouter([
     { path: '/login', element: withSuspense(LoginPage) },
     { path: '/register', element: withSuspense(RegisterPage) },
+    { path: '/i/:token', element: withSuspense(PublicInvoicePortalPage) },
+    { path: '/q/:token', element: withSuspense(PublicQuotePortalPage) },
     {
         element: <ProtectedRoute />,
         children: [

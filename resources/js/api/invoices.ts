@@ -19,6 +19,11 @@ export interface InvoiceInput {
     tax_rate?: number;
     notes?: string;
     terms?: string;
+    quote_id?: number;
+    milestone_name?: string;
+    milestone_sequence?: number;
+    milestone_total_termins?: number;
+    milestone_percentage?: number;
     items: Array<{
         product_id?: number | null;
         description: string;
@@ -49,4 +54,8 @@ export const invoicesApi = {
         api.post<{ data: Invoice }>(`/invoices/${id}/duplicate`).then((r) => r.data.data),
     sendEmail: (id: number, data?: { to?: string; subject?: string; message?: string }) =>
         api.post<{ success: boolean; message: string }>(`/invoices/${id}/email`, data).then((r) => r.data),
+    approveProof: (id: number, data?: { amount?: number; payment_method?: string; admin_notes?: string }) =>
+        api.post<{ message: string; invoice: Invoice }>(`/invoices/${id}/approve-proof`, data).then((r) => r.data),
+    rejectProof: (id: number, data?: { reason?: string }) =>
+        api.post<{ message: string; invoice: Invoice }>(`/invoices/${id}/reject-proof`, data).then((r) => r.data),
 };

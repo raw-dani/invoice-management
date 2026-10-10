@@ -14,6 +14,7 @@ import { useSelection } from '../../components/bulk/useSelection';
 import { useBulkDelete, useBulkAction } from '../../components/bulk/useBulk';
 import { BulkBar } from '../../components/bulk/BulkBar';
 import { reportBulkDelete, reportBulkResult } from '../../components/bulk/result';
+import { WhatsAppShareModal, WhatsAppShareData } from '../../components/WhatsAppShareModal';
 
 const STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'rejected', 'expired', 'converted'];
 
@@ -21,6 +22,7 @@ export default function QuoteListPage() {
     const [filters, setFilters] = useState<QuoteFilters>({ page: 1, per_page: 15 });
     const [deleteId, setDeleteId] = useState<number | null>(null);
     const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+    const [activeShare, setActiveShare] = useState<WhatsAppShareData | null>(null);
 
     const { data, isLoading } = useQuotes(filters);
     const { data: customersData } = useCustomers({ per_page: 200 });
@@ -128,12 +130,36 @@ export default function QuoteListPage() {
                                 {
                                     header: '',
                                     accessor: (q) => (
-                                        <button
-                                            onClick={(e) => { e.stopPropagation(); setDeleteId(q.id); }}
-                                            className="text-red-600 hover:text-red-700 text-sm"
-                                        >
-                                            Delete
-                                        </button>
+                                        <div className="flex items-center justify-end gap-2">
+                                            <button
+                                                type="button"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    setActiveShare({
+                                                        entityType: 'quote',
+                                                        id: q.id,
+                                                        number: q.quote_number,
+                                                        total: q.total,
+                                                        currency: q.currency,
+                                                        date: q.quote_date,
+                                                        dueDate: q.valid_until || undefined,
+                                                        customerName: q.customer?.company_name || 'Pelanggan',
+                                                        customerPhone: q.customer?.phone,
+                                                        publicToken: q.public_token,
+                                                    });
+                                                }}
+                                                className="p-1 rounded hover:bg-emerald-50 text-emerald-600 transition text-sm font-medium"
+                                                title="Kirim via WhatsApp"
+                                            >
+                                                💬 WA
+                                            </button>
+                                            <button
+                                                onClick={(e) => { e.stopPropagation(); setDeleteId(q.id); }}
+                                                className="text-red-600 hover:text-red-700 text-sm"
+                                            >
+                                                Delete
+                                            </button>
+                                        </div>
                                     ),
                                     className: 'text-right',
                                 },
@@ -167,6 +193,12 @@ export default function QuoteListPage() {
                 onCancel={() => setBulkDeleteOpen(false)}
                 danger
                 confirmText="Delete"
+            />
+
+            <WhatsAppShareModal
+                open={!!activeShare}
+                onClose={() => setActiveShare(null)}
+                data={activeShare}
             />
         </>
     );

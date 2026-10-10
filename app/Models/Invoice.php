@@ -14,7 +14,12 @@ class Invoice extends Model
         'customer_id',
         'subscription_id',
         'quote_id',
+        'milestone_name',
+        'milestone_sequence',
+        'milestone_total_termins',
+        'milestone_percentage',
         'invoice_number',
+        'public_token',
         'invoice_date',
         'due_date',
         'status',
@@ -29,12 +34,19 @@ class Invoice extends Model
         'currency',
         'notes',
         'terms',
+        'payment_proof_path',
+        'payment_proof_status',
+        'payment_proof_notes',
+        'payment_proof_uploaded_at',
         'is_demo',
     ];
 
     protected $casts = [
         'invoice_date' => 'date',
         'due_date' => 'date',
+        'milestone_sequence' => 'integer',
+        'milestone_total_termins' => 'integer',
+        'milestone_percentage' => 'decimal:2',
         'subtotal' => 'decimal:2',
         'discount' => 'decimal:2',
         'discount_type' => 'integer',
@@ -43,8 +55,18 @@ class Invoice extends Model
         'total' => 'decimal:2',
         'paid_amount' => 'decimal:2',
         'balance' => 'decimal:2',
+        'payment_proof_uploaded_at' => 'datetime',
         'is_demo' => 'boolean',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Invoice $invoice) {
+            if (empty($invoice->public_token)) {
+                $invoice->public_token = \Illuminate\Support\Str::random(32);
+            }
+        });
+    }
 
     public function company()
     {
@@ -69,6 +91,16 @@ class Invoice extends Model
     public function subscription()
     {
         return $this->belongsTo(Subscription::class);
+    }
+
+    public function quote()
+    {
+        return $this->belongsTo(Quote::class);
+    }
+
+    public function milestone()
+    {
+        return $this->hasOne(QuoteMilestone::class);
     }
 
     public static function generateInvoiceNumber(int $companyId): string

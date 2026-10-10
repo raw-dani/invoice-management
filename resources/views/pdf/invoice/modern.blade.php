@@ -170,6 +170,8 @@
         $currency = $invoice->currency;
     @endphp
 
+    @include('pdf.partials.paid_watermark')
+
     {{-- Header --}}
     <div class="header">
         <div class="company-info">
@@ -192,6 +194,11 @@
             <h1>Invoice</h1>
             <div class="doc-number">#{{ $invoice->invoice_number }}</div>
             <div class="status-badge status-{{ $invoice->status }}">{{ str_replace('_', ' ', ucfirst($invoice->status)) }}</div>
+            @if (!empty($invoice->milestone_name))
+                <div style="margin-top: 6px; font-size: 9px; color: #4338ca; font-weight: bold; background: #eef2ff; padding: 2px 8px; border-radius: 4px; display: inline-block; border: 1px solid #c7d2fe;">
+                    🎯 {{ $invoice->milestone_name }} @if ($invoice->milestone_sequence && $invoice->milestone_total_termins) ({{ $invoice->milestone_sequence }}/{{ $invoice->milestone_total_termins }}) @endif
+                </div>
+            @endif
         </div>
     </div>
 
@@ -318,6 +325,9 @@
             <div class="notes-body">{{ $invoice->terms }}</div>
         </div>
     @endif
+
+    {{-- Signature & Payment Block --}}
+    @include('pdf.partials.signature_and_payment')
 
     {{-- Footer --}}
     <div class="footer">

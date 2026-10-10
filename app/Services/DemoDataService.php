@@ -359,6 +359,43 @@ class DemoDataService
                     ]);
                 }
                 $quote->calculateTotals();
+
+                if ($quote->quote_number === 'QT-DEMO-2026-0002') {
+                    \App\Models\QuoteMilestone::where('quote_id', $quote->id)->delete();
+                    \App\Models\QuoteMilestone::create([
+                        'company_id' => $companyId,
+                        'quote_id' => $quote->id,
+                        'sequence' => 1,
+                        'name' => 'Termin 1: Uang Muka (DP)',
+                        'percentage' => 30.00,
+                        'amount' => round($quote->total * 0.30, 2),
+                        'due_date' => $now->copy()->subDays(3)->toDateString(),
+                        'status' => 'pending',
+                        'notes' => 'Pembayaran awal sebelum pengerjaan proyek dimulai.',
+                    ]);
+                    \App\Models\QuoteMilestone::create([
+                        'company_id' => $companyId,
+                        'quote_id' => $quote->id,
+                        'sequence' => 2,
+                        'name' => 'Termin 2: Progres Pengerjaan 50%',
+                        'percentage' => 40.00,
+                        'amount' => round($quote->total * 0.40, 2),
+                        'due_date' => $now->copy()->addDays(20)->toDateString(),
+                        'status' => 'pending',
+                        'notes' => 'Setelah serah terima modul tahap 1.',
+                    ]);
+                    \App\Models\QuoteMilestone::create([
+                        'company_id' => $companyId,
+                        'quote_id' => $quote->id,
+                        'sequence' => 3,
+                        'name' => 'Termin 3: Pelunasan & Serah Terima',
+                        'percentage' => 30.00,
+                        'amount' => round($quote->total * 0.30, 2),
+                        'due_date' => $now->copy()->addDays(45)->toDateString(),
+                        'status' => 'pending',
+                        'notes' => 'Final user acceptance testing dan go-live.',
+                    ]);
+                }
             }
 
             // 6. Demo Invoices
@@ -480,6 +517,30 @@ class DemoDataService
                     'paid_amount' => 0,
                     'items' => [
                         ['product' => 'PROD-DEMO-001', 'desc' => 'Cloud Server Hosting - Cancelled Duplicate Order', 'qty' => 1, 'price' => 2500000],
+                    ],
+                ],
+                // 9. Overdue Invoice (45 days overdue - 31-60 bucket)
+                [
+                    'number' => 'INV-DEMO-2026-0009',
+                    'customer' => 'CUST-DEMO-006',
+                    'status' => 'overdue',
+                    'date' => $now->copy()->subDays(75),
+                    'due' => $now->copy()->subDays(45),
+                    'paid_amount' => 0,
+                    'items' => [
+                        ['product' => 'PROD-DEMO-002', 'desc' => 'Dedicated Fiber Leased Line 100 Mbps (Overdue 45d)', 'qty' => 2, 'price' => 4500000],
+                    ],
+                ],
+                // 10. Severely Overdue Invoice (95 days overdue - >90 bucket / Kritis)
+                [
+                    'number' => 'INV-DEMO-2026-0010',
+                    'customer' => 'CUST-DEMO-003',
+                    'status' => 'overdue',
+                    'date' => $now->copy()->subDays(125),
+                    'due' => $now->copy()->subDays(95),
+                    'paid_amount' => 0,
+                    'items' => [
+                        ['product' => 'PROD-DEMO-005', 'desc' => 'IT Infrastructure Support & SLA Retainer (Overdue >90d)', 'qty' => 1, 'price' => 7500000],
                     ],
                 ],
             ];
@@ -720,7 +781,8 @@ class DemoDataService
             }
             $deleted['invoices'] = Invoice::where('company_id', $companyId)->where('is_demo', true)->delete();
 
-            // 3. Quotes & items
+            // 3. Quotes & items & milestones
+            \App\Models\QuoteMilestone::where('company_id', $companyId)->delete();
             $demoQuotes = Quote::where('company_id', $companyId)->where('is_demo', true)->get();
             if ($demoQuotes->isNotEmpty()) {
                 QuoteItem::whereIn('quote_id', $demoQuotes->pluck('id'))->delete();

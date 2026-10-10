@@ -47,6 +47,10 @@ export default function InvoiceFormPage() {
     const [discountType, setDiscountType] = useState<0 | 1>(0);
     const [notes, setNotes] = useState('');
     const [terms, setTerms] = useState('');
+    const [milestoneName, setMilestoneName] = useState('');
+    const [milestoneSequence, setMilestoneSequence] = useState<number | ''>('');
+    const [milestoneTotalTermins, setMilestoneTotalTermins] = useState<number | ''>('');
+    const [milestonePercentage, setMilestonePercentage] = useState<number | ''>('');
     const [items, setItems] = useState<Item[]>([
         { product_id: null, description: '', quantity: 1, unit_price: 0, discount: 0, tax_rate: 0 },
     ]);
@@ -68,6 +72,10 @@ export default function InvoiceFormPage() {
             setDiscountType(existing.discount_type);
             setNotes(existing.notes ?? '');
             setTerms(existing.terms ?? '');
+            setMilestoneName(existing.milestone_name ?? '');
+            setMilestoneSequence(existing.milestone_sequence ?? '');
+            setMilestoneTotalTermins(existing.milestone_total_termins ?? '');
+            setMilestonePercentage(existing.milestone_percentage ?? '');
             setItems(existing.items?.map((it) => ({
                 product_id: it.product_id,
                 description: it.description,
@@ -128,6 +136,10 @@ export default function InvoiceFormPage() {
             tax_rate: taxRate,
             notes: notes || undefined,
             terms: terms || undefined,
+            milestone_name: milestoneName || undefined,
+            milestone_sequence: milestoneSequence ? Number(milestoneSequence) : undefined,
+            milestone_total_termins: milestoneTotalTermins ? Number(milestoneTotalTermins) : undefined,
+            milestone_percentage: milestonePercentage ? Number(milestonePercentage) : undefined,
             items: items.map((i) => ({
                 product_id: i.product_id,
                 description: i.description,
@@ -344,6 +356,62 @@ export default function InvoiceFormPage() {
                                     <Textarea value={terms} onChange={(e) => setTerms(e.target.value)} />
                                 </Field>
                             </div>
+                            <div className="md:col-span-2 p-4 rounded-xl border border-indigo-100 bg-indigo-50/40 space-y-3">
+                                <div>
+                                    <span className="text-xs font-bold uppercase tracking-wider text-indigo-700 block">
+                                        Skema Termin & Milestone Proyek (Opsional)
+                                    </span>
+                                    <p className="text-xs text-gray-500 mt-0.5">
+                                        Isi informasi ini jika faktur ini adalah bagian dari termin atau DP pekerjaan bertahap.
+                                    </p>
+                                </div>
+                                <div className="grid grid-cols-1 sm:grid-cols-12 gap-3">
+                                    <div className="sm:col-span-6">
+                                        <Field label="Nama Termin">
+                                            <Input
+                                                placeholder="Contoh: Termin 1 (Uang Muka DP 30%)"
+                                                value={milestoneName}
+                                                onChange={(e) => setMilestoneName(e.target.value)}
+                                            />
+                                        </Field>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <Field label="Tahap Ke">
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                placeholder="1"
+                                                value={milestoneSequence}
+                                                onChange={(e) => setMilestoneSequence(e.target.value ? Number(e.target.value) : '')}
+                                            />
+                                        </Field>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <Field label="Total Tahap">
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                placeholder="3"
+                                                value={milestoneTotalTermins}
+                                                onChange={(e) => setMilestoneTotalTermins(e.target.value ? Number(e.target.value) : '')}
+                                            />
+                                        </Field>
+                                    </div>
+                                    <div className="sm:col-span-2">
+                                        <Field label="Bobot (%)">
+                                            <Input
+                                                type="number"
+                                                min="1"
+                                                max="100"
+                                                step="0.1"
+                                                placeholder="30%"
+                                                value={milestonePercentage}
+                                                onChange={(e) => setMilestonePercentage(e.target.value ? Number(e.target.value) : '')}
+                                            />
+                                        </Field>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     )}
 
@@ -354,6 +422,17 @@ export default function InvoiceFormPage() {
                                 {customersData?.data.find((c) => c.id === customerId)?.company_name}
                                 <br />
                                 <strong>Date:</strong> {invoiceDate} · <strong>Due:</strong> {dueDate}
+                                {milestoneName && (
+                                    <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 font-medium">
+                                        <span>🎯 {milestoneName}</span>
+                                        {milestoneSequence && milestoneTotalTermins && (
+                                            <span>(Tahap {milestoneSequence}/{milestoneTotalTermins})</span>
+                                        )}
+                                        {milestonePercentage && (
+                                            <span>· {milestonePercentage}%</span>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                             <table className="w-full text-sm border-t border-b">
                                 <tbody>
