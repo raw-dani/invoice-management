@@ -491,7 +491,7 @@ export default function InvoiceDetailPage() {
                         {formatDate(invoice.due_date)}
                     </div>
                     <div className="mt-1 text-xs text-gray-500">
-                        Diterbitkan: {formatDate(invoice.issue_date)}
+                        Diterbitkan: {formatDate(invoice.invoice_date)}
                     </div>
                 </div>
             </div>
@@ -716,7 +716,7 @@ export default function InvoiceDetailPage() {
                         <div className="pt-3 border-t text-xs text-gray-500 space-y-1 bg-slate-50 p-3 rounded-lg">
                             <div className="flex justify-between">
                                 <span>Tanggal Terbit:</span>
-                                <span className="font-medium text-gray-700">{formatDate(invoice.issue_date)}</span>
+                                <span className="font-medium text-gray-700">{formatDate(invoice.invoice_date)}</span>
                             </div>
                             <div className="flex justify-between">
                                 <span>Jatuh Tempo:</span>
@@ -741,10 +741,10 @@ export default function InvoiceDetailPage() {
                                 <span className="text-gray-400 block">Nama Perusahaan</span>
                                 <span className="font-semibold text-gray-900 text-sm">{invoice.customer?.company_name || '-'}</span>
                             </div>
-                            {invoice.customer?.name && (
+                            {invoice.customer?.contact_name && (
                                 <div>
                                     <span className="text-gray-400 block">Kontak Personal</span>
-                                    <span className="text-gray-700 font-medium">{invoice.customer.name}</span>
+                                    <span className="text-gray-700 font-medium">{invoice.customer.contact_name}</span>
                                 </div>
                             )}
                             {invoice.customer?.email && (
@@ -838,7 +838,7 @@ export default function InvoiceDetailPage() {
                 confirmText="Setujui & Tandai Lunas"
                 cancelText="Batal"
                 onConfirm={async () => {
-                    await approveProof.mutateAsync(invoice.id);
+                    await approveProof.mutateAsync({ id: invoice.id });
                     setConfirmApproveProof(false);
                     toast.success('Bukti pembayaran disetujui & invoice ditandai lunas.');
                 }}
@@ -884,7 +884,7 @@ export default function InvoiceDetailPage() {
                             variant="danger"
                             loading={rejectProof.isPending}
                             onClick={async () => {
-                                await rejectProof.mutateAsync({ id: invoice.id, notes: rejectReason });
+                                await rejectProof.mutateAsync({ id: invoice.id, reason: rejectReason });
                                 setConfirmRejectProof(false);
                                 setRejectReason('');
                                 toast.success('Bukti pembayaran ditolak.');
@@ -906,7 +906,7 @@ export default function InvoiceDetailPage() {
                     number: invoice.invoice_number,
                     total: invoice.total,
                     currency: invoice.currency,
-                    date: invoice.issue_date,
+                    date: invoice.invoice_date,
                     dueDate: invoice.due_date,
                     customerName: invoice.customer?.company_name || 'Pelanggan',
                     customerPhone: invoice.customer?.phone,

@@ -1686,12 +1686,25 @@ function EmailFields({
     );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+    label,
+    children,
+    hint,
+    required,
+}: {
+    label: string;
+    children: React.ReactNode;
+    hint?: string;
+    required?: boolean;
+}) {
     return (
-        <label className="block space-y-1">
-            <span className="block text-sm font-medium text-gray-700">{label}</span>
+        <div className="space-y-1">
+            <label className="block text-sm font-medium text-gray-700">
+                {label} {required && <span className="text-red-500">*</span>}
+            </label>
             {children}
-        </label>
+            {hint && <p className="text-xs text-gray-500">{hint}</p>}
+        </div>
     );
 }
 

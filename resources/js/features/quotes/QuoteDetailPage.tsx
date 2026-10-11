@@ -134,7 +134,7 @@ export default function QuoteDetailPage() {
                         <StatusBadge status={quote.status} className="text-xs font-semibold px-2.5 py-0.5" />
                     </div>
                     <p className="text-xs sm:text-sm text-gray-500">
-                        Kepada: <strong className="text-gray-800 font-medium">{quote.customer?.company_name || quote.customer?.name}</strong> · Dibuat pada {formatDate(quote.quote_date)}
+                        Kepada: <strong className="text-gray-800 font-medium">{quote.customer?.company_name || quote.customer?.contact_name}</strong> · Dibuat pada {formatDate(quote.quote_date)}
                     </p>
                 </div>
 
@@ -365,7 +365,7 @@ export default function QuoteDetailPage() {
                         </div>
                     </div>
                     <div className="mt-2 text-base font-semibold text-gray-900 truncate">
-                        {quote.customer?.company_name || quote.customer?.name || '-'}
+                        {quote.customer?.company_name || quote.customer?.contact_name || '-'}
                     </div>
                     <div className="mt-1 text-xs text-gray-500 truncate">
                         {quote.customer?.email || quote.customer?.phone || 'Informasi kontak'}
@@ -572,10 +572,10 @@ export default function QuoteDetailPage() {
                                 <span className="text-gray-400 block">Nama Perusahaan</span>
                                 <span className="font-semibold text-gray-900 text-sm">{quote.customer?.company_name || '-'}</span>
                             </div>
-                            {quote.customer?.name && (
+                            {quote.customer?.contact_name && (
                                 <div>
                                     <span className="text-gray-400 block">Kontak Personal</span>
-                                    <span className="text-gray-700 font-medium">{quote.customer.name}</span>
+                                    <span className="text-gray-700 font-medium">{quote.customer.contact_name}</span>
                                 </div>
                             )}
                             {quote.customer?.email && (
@@ -617,7 +617,7 @@ export default function QuoteDetailPage() {
                     <div className="bg-gray-50 rounded-lg p-4 text-sm space-y-2 border border-gray-200">
                         <div className="flex justify-between">
                             <span className="text-gray-500">Pelanggan</span>
-                            <span className="font-medium text-gray-900">{quote.customer?.company_name || quote.customer?.name}</span>
+                            <span className="font-medium text-gray-900">{quote.customer?.company_name || quote.customer?.contact_name}</span>
                         </div>
                         <div className="flex justify-between">
                             <span className="text-gray-500">Jumlah Item</span>
