@@ -3,6 +3,7 @@
 Aplikasi invoice management berbasis Laravel API dan React TypeScript untuk mengelola customer, product, invoice, quote, payment, subscription, billing scheduler, email template, laporan, dan audit activity.
 
 > 📖 **Dokumentasi Presentasi Klien & Fitur Unggulan**: Lihat file [PRESENTASI_FITUR_APLIKASI.md](PRESENTASI_FITUR_APLIKASI.md) untuk panduan lengkap 10 fitur unik (*killer features*), perbandingan kompetitor, dan alur pitch 15 menit ke calon klien.
+> 🚀 **Panduan Deployment Server**: Lihat file [PANDUAN_DEPLOY_CPANEL_CYBERPANEL.md](PANDUAN_DEPLOY_CPANEL_CYBERPANEL.md) untuk panduan langkah demi langkah menjalankan aplikasi di **cPanel** dan **CyberPanel (OpenLiteSpeed)** menggunakan domain utama.
 
 ## Stack
 
