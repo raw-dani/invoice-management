@@ -79,19 +79,40 @@ class LicenseManagementTest extends TestCase
             ->assertJsonValidationErrors(['license_key']);
     }
 
-    public function test_viewer_cannot_activate_or_revoke_license(): void
+    public function test_all_users_can_attempt_activation_but_viewer_cannot_revoke(): void
     {
         $activate = $this->actingAs($this->viewer, 'sanctum')
-            ->postJson('/api/settings/license/activate', [
-                'license_key' => 'INVOICE-TEST-1234-5678-ABCD',
-            ]);
+            ->postJson('/api/settings/license/activate', []);
 
-        $activate->assertStatus(403);
+        // All users reach validation instead of getting 403 Forbidden
+        $activate->assertStatus(422)
+            ->assertJsonValidationErrors(['license_key']);
 
         $revoke = $this->actingAs($this->viewer, 'sanctum')
             ->postJson('/api/settings/license/revoke');
 
         $revoke->assertStatus(403);
+    }
+
+    public function test_operational_endpoints_blocked_when_unlicensed(): void
+    {
+        config(['services.license.enforce_in_tests' => true]);
+
+        $response = $this->actingAs($this->admin, 'sanctum')
+            ->getJson('/api/invoices');
+
+        $response->assertStatus(423)
+            ->assertJson([
+                'license_required' => true,
+            ]);
+
+        // License status endpoint remains accessible
+        $status = $this->actingAs($this->admin, 'sanctum')
+            ->getJson('/api/settings/license/status');
+
+        $status->assertStatus(200);
+
+        config(['services.license.enforce_in_tests' => false]);
     }
 
     public function test_revoke_license_endpoint(): void

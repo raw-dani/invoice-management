@@ -66,6 +66,27 @@ class LicenseService
         $registeredInstallId = $localData['install_id'] ?? null;
         $registeredDomain = $localData['domain'] ?? null;
 
+        // Auto-sinkronisasi masa berlaku lisensi asli dari License Manager jika masih berisi token expiry 24 jam
+        if (!empty($licenseKey)) {
+            $isShortTokenExpiry = false;
+            if (!empty($expiresAt) && !empty($localData['last_checked'])) {
+                $diff = strtotime($expiresAt) - (int)$localData['last_checked'];
+                if ($diff > 0 && $diff <= 86400 * 2) {
+                    $isShortTokenExpiry = true;
+                }
+            }
+
+            if (empty($expiresAt) || $isShortTokenExpiry) {
+                $detail = $guard->getLicenseInfo($licenseKey);
+                if (!empty($detail['expires_at'])) {
+                    $expiresAt = $detail['expires_at'];
+                    $localData['expires_at'] = $expiresAt;
+                    $guard->writeStorageData($localData);
+                    Setting::setValue($companyId, 'license_expires_at', $expiresAt);
+                }
+            }
+        }
+
         // Determine status
         $status = 'unlicensed';
         $statusMessage = 'Aplikasi belum diaktivasi lisensi resmi.';

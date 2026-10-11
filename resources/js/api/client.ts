@@ -32,6 +32,11 @@ api.interceptors.response.use(
             if (window.location.pathname !== '/login') {
                 window.location.href = '/login';
             }
+        } else if (status === 423 && error.response?.data?.license_required) {
+            toast.error(message || 'Aplikasi memerlukan lisensi aktif.');
+            if (window.location.pathname !== '/settings') {
+                window.location.href = '/settings?group=license';
+            }
         } else if (status === 422 && error.response.data?.errors) {
             // Validation errors - handled by react-hook-form
         } else if (status >= 500) {

@@ -61,7 +61,7 @@ Route::post('saml/acs', [SamlController::class, 'acs'])->name('saml.acs');
 Route::match(['get', 'post'], 'saml/sls', [SamlController::class, 'sls'])->name('saml.sls');
 
 // Protected (Sanctum)
-Route::middleware('auth:sanctum')->group(function () {
+Route::middleware(['auth:sanctum', 'licensed'])->group(function () {
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/me',      [AuthController::class, 'me']);
 
@@ -150,9 +150,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('settings/{group}', [SettingsController::class, 'update'])->middleware('role:owner,admin');
     Route::post('settings/email/test', [SettingsController::class, 'testEmail'])->middleware('role:owner,admin');
     Route::post('saml/test',          [SamlController::class, 'test'])->middleware('role:owner,admin');
-    Route::get('settings/license/status',    [LicenseController::class, 'status'])->middleware('role:owner,admin,demo');
-    Route::post('settings/license/activate', [LicenseController::class, 'activate'])->middleware('role:owner,admin');
-    Route::post('settings/license/verify',   [LicenseController::class, 'verify'])->middleware('role:owner,admin');
+    Route::get('settings/license/status',    [LicenseController::class, 'status']);
+    Route::post('settings/license/activate', [LicenseController::class, 'activate']);
+    Route::post('settings/license/verify',   [LicenseController::class, 'verify']);
     Route::post('settings/license/revoke',   [LicenseController::class, 'revoke'])->middleware('role:owner,admin');
     Route::post('company/logo',      [SettingsController::class, 'uploadLogo'])->middleware('role:owner,admin');
     Route::post('company/signature', [SettingsController::class, 'uploadSignature'])->middleware('role:owner,admin');

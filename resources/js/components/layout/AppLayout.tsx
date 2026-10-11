@@ -8,7 +8,7 @@ import { searchApi } from '../../api/search';
 import type { SearchResults } from '../../api/search';
 import { settingsApi } from '../../api/settings';
 import { notificationsApi } from '../../api/notifications';
-import { UserCircleIcon, ArrowRightOnRectangleIcon, Bars3Icon, XMarkIcon } from '../ui/Icons';
+import { UserCircleIcon, ArrowRightOnRectangleIcon, Bars3Icon, XMarkIcon, LockClosedIcon, KeyIcon } from '../ui/Icons';
 
 const Icon = ({ className, children }: { className?: string; children: ReactNode }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
@@ -146,6 +146,13 @@ export default function AppLayout() {
     const [search, setSearch] = useState('');
     const [term, setTerm] = useState('');
 
+    const { data: licenseStatus } = useQuery({
+        queryKey: ['license_status'],
+        queryFn: settingsApi.getLicenseStatus,
+        staleTime: 30_000,
+    });
+    const isLicensed = licenseStatus?.is_licensed ?? true;
+
     // Fetch company settings to get the configured logo and company name in real-time
     const { data: companySettings } = useQuery({
         queryKey: ['settings_group', 'company'],
@@ -175,12 +182,13 @@ export default function AppLayout() {
     const { data: results } = useQuery({
         queryKey: ['global-search', term],
         queryFn: () => searchApi(term),
-        enabled: term.length >= 2,
+        enabled: isLicensed && term.length >= 2,
     });
 
     const { data: notifications } = useQuery({
         queryKey: ['notifications'],
         queryFn: notificationsApi.list,
+        enabled: isLicensed,
         refetchInterval: 60_000,
     });
 
@@ -193,43 +201,71 @@ export default function AppLayout() {
 
     const renderNavLinks = (onItemClick?: () => void) => (
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-            {NAV_ITEMS.map((item) => (
-                <NavLink
-                    key={item.to}
-                    to={item.to}
-                    end={item.to === '/'}
-                    onClick={onItemClick}
-                    className={({ isActive }) => classNames(
-                        'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition',
-                        isActive
-                            ? 'bg-indigo-50 text-indigo-700 shadow-xs'
-                            : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
-                    )}
-                >
-                    <item.icon className="h-5 w-5 shrink-0" />
-                    <span className="truncate">{item.label}</span>
-                    {item.to === '/notifications' && !!notifications?.unread_count && (
-                        <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-xs">
-                            {notifications.unread_count}
-                        </span>
-                    )}
-                </NavLink>
-            ))}
+            {NAV_ITEMS.map((item) => {
+                const isLocked = !isLicensed && item.to !== '/settings';
+                const targetTo = item.to === '/settings' && !isLicensed ? '/settings?group=license' : item.to;
+
+                return (
+                    <NavLink
+                        key={item.to}
+                        to={isLocked ? '/settings?group=license' : targetTo}
+                        end={item.to === '/'}
+                        onClick={(e) => {
+                            if (isLocked) {
+                                e.preventDefault();
+                                toast.error('Modul ini dikunci sementara hingga lisensi resmi diaktifkan.');
+                                navigate('/settings?group=license');
+                            }
+                            onItemClick?.();
+                        }}
+                        className={({ isActive }) => classNames(
+                            'flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition',
+                            isLocked
+                                ? 'opacity-40 text-gray-400 cursor-not-allowed hover:bg-gray-50'
+                                : isActive
+                                ? 'bg-indigo-50 text-indigo-700 shadow-xs'
+                                : 'text-gray-700 hover:bg-gray-100 hover:text-gray-900'
+                        )}
+                        title={isLocked ? 'Modul dikunci: Lisensi aktif diperlukan' : undefined}
+                    >
+                        <item.icon className="h-5 w-5 shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                        {isLocked ? (
+                            <LockClosedIcon className="ml-auto h-4 w-4 text-gray-400 shrink-0" />
+                        ) : item.to === '/settings' && !isLicensed ? (
+                            <span className="ml-auto rounded-full bg-amber-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                                Aktivasi
+                            </span>
+                        ) : item.to === '/notifications' && !!notifications?.unread_count ? (
+                            <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white shadow-xs">
+                                {notifications.unread_count}
+                            </span>
+                        ) : null}
+                    </NavLink>
+                );
+            })}
         </nav>
     );
 
     const renderUserFooter = (onItemClick?: () => void) => (
         <div className="px-3 py-3 border-t border-gray-200 bg-gray-50/50">
             <NavLink
-                to="/profile"
-                onClick={onItemClick}
+                to={isLicensed ? "/profile" : "/settings?group=license"}
+                onClick={(e) => {
+                    if (!isLicensed) {
+                        e.preventDefault();
+                        toast.error('Akses profil dikunci sementara hingga lisensi diaktivasi.');
+                        navigate('/settings?group=license');
+                    }
+                    onItemClick?.();
+                }}
                 className={({ isActive }) => classNames(
                     'flex items-center gap-2.5 p-2 rounded-lg text-sm transition group mb-1.5',
                     isActive
                         ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 font-medium shadow-xs'
                         : 'text-gray-700 hover:bg-gray-100'
                 )}
-                title="Buka profil akun & ganti password"
+                title={isLicensed ? "Buka profil akun & ganti password" : "Aktivasi Lisensi"}
             >
                 <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
                     {user?.name?.charAt(0).toUpperCase() || 'U'}
@@ -241,9 +277,10 @@ export default function AppLayout() {
                     <div className="text-[11px] text-gray-500 truncate flex items-center gap-1">
                         <span className="capitalize font-medium text-indigo-600">{user?.role}</span>
                         <span>•</span>
-                        <span>Profil</span>
+                        <span>{isLicensed ? 'Profil' : 'Lisensi'}</span>
                     </div>
                 </div>
+                {!isLicensed && <LockClosedIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />}
             </NavLink>
             <button
                 onClick={handleLogout}
@@ -268,7 +305,7 @@ export default function AppLayout() {
                     >
                         <Bars3Icon className="w-6 h-6" />
                     </button>
-                    <Link to="/" className="flex items-center gap-2.5 min-w-0">
+                    <Link to={isLicensed ? "/" : "/settings?group=license"} className="flex items-center gap-2.5 min-w-0">
                         <AppLogo logoUrl={logoUrl} name={companyName} className="w-8 h-8" />
                         <span className="font-bold text-gray-900 text-base tracking-tight truncate max-w-[170px] sm:max-w-xs">
                             {companyName}
@@ -278,19 +315,25 @@ export default function AppLayout() {
 
                 <div className="flex items-center gap-1.5 shrink-0">
                     <Link
-                        to="/notifications"
+                        to={isLicensed ? "/notifications" : "/settings?group=license"}
                         className="relative p-2 rounded-lg text-gray-500 hover:text-gray-900 hover:bg-gray-100 transition"
-                        title="Notifikasi"
+                        title={isLicensed ? "Notifikasi" : "Lisensi Diperlukan"}
                     >
-                        <NotificationsIcon className="w-5 h-5" />
-                        {!!notifications?.unread_count && (
-                            <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+                        {isLicensed ? (
+                            <>
+                                <NotificationsIcon className="w-5 h-5" />
+                                {!!notifications?.unread_count && (
+                                    <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-red-500 ring-2 ring-white" />
+                                )}
+                            </>
+                        ) : (
+                            <LockClosedIcon className="w-5 h-5 text-amber-600" />
                         )}
                     </Link>
                     <Link
-                        to="/profile"
+                        to={isLicensed ? "/profile" : "/settings?group=license"}
                         className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center font-bold text-xs shadow-xs ml-1"
-                        title="Profil Saya"
+                        title={isLicensed ? "Profil Saya" : "Aktivasi Lisensi"}
                     >
                         {user?.name?.charAt(0).toUpperCase() || 'U'}
                     </Link>
@@ -335,7 +378,7 @@ export default function AppLayout() {
             {/* Desktop Persistent Sidebar */}
             <aside className="hidden lg:flex lg:w-60 lg:flex-col lg:h-screen lg:sticky lg:top-0 bg-white border-r border-gray-200 shrink-0">
                 <div className="h-16 flex items-center px-5 border-b border-gray-200">
-                    <Link to="/" className="flex items-center gap-2.5 min-w-0">
+                    <Link to={isLicensed ? "/" : "/settings?group=license"} className="flex items-center gap-2.5 min-w-0">
                         <AppLogo logoUrl={logoUrl} name={companyName} className="w-8 h-8" />
                         <span className="font-semibold text-gray-900 text-sm truncate" title={companyName}>
                             {companyName}
@@ -349,16 +392,47 @@ export default function AppLayout() {
             {/* Main Content Viewport */}
             <main className="flex-1 min-w-0 overflow-auto">
                 <div className="max-w-7xl mx-auto px-4 py-5 sm:px-6 sm:py-8">
-                    <SearchBox
-                        value={search}
-                        term={term}
-                        results={results}
-                        onChange={setSearch}
-                        onClear={() => {
-                            setSearch('');
-                            setTerm('');
-                        }}
-                    />
+                    {!isLicensed && (
+                        <div className="mb-6 p-4 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-900 shadow-xs flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                            <div className="flex items-start sm:items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                    <LockClosedIcon className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className="text-sm font-bold text-amber-950 flex items-center gap-2">
+                                        Aplikasi Memerlukan Lisensi Aktif
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-amber-200 text-amber-900">
+                                            {licenseStatus?.status === 'expired' ? 'Kedaluwarsa' : licenseStatus?.status === 'invalid_machine' ? 'Mesin Berbeda' : 'Belum Berlisensi'}
+                                        </span>
+                                    </h4>
+                                    <p className="text-xs text-amber-800 mt-0.5">
+                                        {licenseStatus?.status_message || 'Semua modul operasional dikunci sementara hingga lisensi resmi diaktivasi.'}
+                                    </p>
+                                </div>
+                            </div>
+                            {location.pathname !== '/settings' && (
+                                <Link
+                                    to="/settings?group=license"
+                                    className="inline-flex items-center justify-center px-4 py-2 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-xs transition shrink-0"
+                                >
+                                    <KeyIcon className="w-4 h-4 mr-1.5" />
+                                    Aktivasi Lisensi Sekarang
+                                </Link>
+                            )}
+                        </div>
+                    )}
+                    {isLicensed && (
+                        <SearchBox
+                            value={search}
+                            term={term}
+                            results={results}
+                            onChange={setSearch}
+                            onClear={() => {
+                                setSearch('');
+                                setTerm('');
+                            }}
+                        />
+                    )}
                     <Outlet />
                 </div>
             </main>

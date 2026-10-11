@@ -155,6 +155,18 @@ class EnvironmentValidator
     }
 
     /**
+     * Ambil informasi detail lisensi asli dari License Manager server.
+     */
+    public function getLicenseInfo(string $licenseKey): ?array
+    {
+        $res = $this->request('GET', '/api/v1/license/' . urlencode(trim($licenseKey)));
+        if (($res['status'] ?? '') === 'success' && isset($res['data'])) {
+            return $res['data'];
+        }
+        return null;
+    }
+
+    /**
      * Verifikasi lisensi ke server pusat.
      */
     public function verifyWithServer(string $licenseKey): array
@@ -173,7 +185,17 @@ class EnvironmentValidator
             ],
         ];
 
-        return $this->request('POST', '/api/v1/verify', $payload);
+        $res = $this->request('POST', '/api/v1/verify', $payload);
+
+        if (($res['status'] ?? '') === 'success') {
+            // Sinkronkan masa berlaku lisensi yang sebenarnya (bukan sekadar token JWT expiry)
+            $detail = $this->getLicenseInfo($licenseKey);
+            if (!empty($detail['expires_at'])) {
+                $res['data']['expires_at'] = $detail['expires_at'];
+            }
+        }
+
+        return $res;
     }
 
     /**
@@ -198,15 +220,24 @@ class EnvironmentValidator
         $res = $this->request('POST', '/api/v1/activate', $payload);
 
         if (($res['status'] ?? '') === 'success') {
+            // Ambil masa berlaku lisensi yang sebenarnya dari License Manager
+            $detail = $this->getLicenseInfo($licenseKey);
+            $realExpiresAt = $detail['expires_at'] ?? ($res['data']['license']['expires_at'] ?? ($res['data']['expires_at'] ?? null));
+
             $saveData = [
                 'license_key' => trim($licenseKey),
                 'token' => $res['data']['token'] ?? null,
-                'expires_at' => $res['data']['expires_at'] ?? null,
+                'token_expires_at' => $res['data']['expires_at'] ?? null,
+                'expires_at' => $realExpiresAt,
                 'install_id' => $this->getInstallId(),
                 'domain' => $this->getDomain(),
                 'last_checked' => time(),
             ];
             $this->writeStorageData($saveData);
+
+            if ($realExpiresAt) {
+                $res['data']['expires_at'] = $realExpiresAt;
+            }
         }
 
         return $res;

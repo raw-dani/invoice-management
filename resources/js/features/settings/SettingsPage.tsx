@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { settingsApi, SettingsGroup, DemoDataStats } from '../../api/settings';
 import { Card, CardBody, CardHeader, PageHeader } from '../../components/ui/Display';
@@ -49,10 +50,33 @@ const GROUPS: Array<{ key: SettingsGroup; label: string; icon: React.ReactNode }
 
 export default function SettingsPage() {
     const { user } = useAuth();
+    const [searchParams, setSearchParams] = useSearchParams();
+    const queryGroup = searchParams.get('group') as SettingsGroup | null;
     const isAdmin = Boolean(user && ['owner', 'admin'].includes(user.role));
     const isDemo = user?.role === 'demo';
-    const [group, setGroup] = useState<SettingsGroup>('company');
+
+    const { data: licenseStatus } = useQuery({
+        queryKey: ['license_status'],
+        queryFn: settingsApi.getLicenseStatus,
+        staleTime: 30_000,
+    });
+    const isLicensed = licenseStatus?.is_licensed ?? true;
+
+    const [group, setGroup] = useState<SettingsGroup>(() => {
+        if (queryGroup && ['company', 'invoice', 'quote', 'email', 'payment', 'saml', 'license', 'demo_data'].includes(queryGroup)) {
+            return queryGroup;
+        }
+        return 'company';
+    });
     const queryClient = useQueryClient();
+
+    useEffect(() => {
+        if (queryGroup && ['company', 'invoice', 'quote', 'email', 'payment', 'saml', 'license', 'demo_data'].includes(queryGroup)) {
+            setGroup(queryGroup);
+        } else if (licenseStatus && !licenseStatus.is_licensed) {
+            setGroup('license');
+        }
+    }, [queryGroup, licenseStatus?.is_licensed]);
 
     const availableGroups: Array<{ key: SettingsGroup; label: string; icon: React.ReactNode }> = [
         ...GROUPS,
@@ -110,6 +134,19 @@ export default function SettingsPage() {
     return (
         <>
             <PageHeader title="Settings" subtitle="Configure company, billing, email, payment preferences, and demo data." />
+            {!isLicensed && (
+                <div className="flex items-start sm:items-center gap-3 p-4 mb-6 rounded-xl bg-amber-50 border-2 border-amber-300 text-amber-900 shadow-xs">
+                    <div className="w-10 h-10 rounded-lg bg-amber-500 text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <LockClosedIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h4 className="font-semibold text-sm text-amber-950">Aplikasi Belum Berlisensi Aktif</h4>
+                        <p className="text-xs text-amber-800 mt-0.5">
+                            Seluruh modul operasional dan konfigurasi lain dikunci sementara. Silakan masukkan Kunci Lisensi resmi di tab <strong>Lisensi Aplikasi</strong> untuk membuka akses sistem.
+                        </p>
+                    </div>
+                </div>
+            )}
             {isDemo && (
                 <div className="flex items-center gap-3 p-4 mb-6 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs">
                     <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
@@ -126,22 +163,41 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
                 <Card className="lg:h-fit">
                     <CardBody className="flex flex-row overflow-x-auto lg:flex-col lg:overflow-x-visible gap-1.5 p-2 sm:p-3">
-                        {availableGroups.map((item) => (
-                            <button
-                                key={item.key}
-                                onClick={() => setGroup(item.key)}
-                                className={`shrink-0 lg:w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2.5 whitespace-nowrap ${
-                                    group === item.key
-                                        ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-xs'
-                                        : 'hover:bg-gray-50 text-gray-700'
-                                }`}
-                            >
-                                <span className={group === item.key ? 'text-indigo-600' : 'text-gray-400'}>
-                                    {item.icon}
-                                </span>
-                                <span>{item.label}</span>
-                            </button>
-                        ))}
+                        {availableGroups.map((item) => {
+                            const isTabLocked = !isLicensed && item.key !== 'license';
+                            return (
+                                <button
+                                    key={item.key}
+                                    disabled={isTabLocked}
+                                    onClick={() => {
+                                        if (isTabLocked) {
+                                            toast.error('Aktivasi lisensi aplikasi terlebih dahulu untuk membuka konfigurasi ini.');
+                                            return;
+                                        }
+                                        setGroup(item.key);
+                                        setSearchParams({ group: item.key });
+                                    }}
+                                    className={`shrink-0 lg:w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center justify-between whitespace-nowrap ${
+                                        isTabLocked
+                                            ? 'opacity-40 cursor-not-allowed text-gray-400 bg-gray-50/50'
+                                            : group === item.key
+                                            ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-xs'
+                                            : 'hover:bg-gray-50 text-gray-700'
+                                    }`}
+                                    title={isTabLocked ? 'Terkunci: Memerlukan lisensi aktif' : undefined}
+                                >
+                                    <div className="flex items-center gap-2.5">
+                                        <span className={group === item.key ? 'text-indigo-600' : 'text-gray-400'}>
+                                            {item.icon}
+                                        </span>
+                                        <span>{item.label}</span>
+                                    </div>
+                                    {isTabLocked && (
+                                        <LockClosedIcon className="w-3.5 h-3.5 text-gray-400 shrink-0" />
+                                    )}
+                                </button>
+                            );
+                        })}
                     </CardBody>
                 </Card>
 
@@ -2306,6 +2362,7 @@ function LicenseSettingsFields({
     }
 
     const isLicensed = Boolean(license?.is_licensed);
+    const canActivate = isLicensed ? !isDemo : true;
     const statusType = license?.status || 'unlicensed';
 
     return (
@@ -2413,7 +2470,9 @@ function LicenseSettingsFields({
                         <span className="text-xs font-medium text-gray-500 block">Masa Berlaku</span>
                         <span className="text-xs font-semibold text-gray-800 block">
                             {license?.expires_at
-                                ? formatDate(license.expires_at)
+                                ? (new Date(license.expires_at).getFullYear() >= 2049
+                                    ? `Seumur Hidup (${formatDate(license.expires_at)})`
+                                    : formatDate(license.expires_at))
                                 : isLicensed
                                 ? 'Seumur Hidup (Lifetime)'
                                 : '-'}
@@ -2454,7 +2513,7 @@ function LicenseSettingsFields({
                         hint="Format standar: INVOICE-XXXX-XXXX-XXXX-XXXX"
                     >
                         <Input
-                            disabled={isDemo}
+                            disabled={!canActivate}
                             className="font-mono uppercase tracking-wider"
                             value={licenseKeyInput}
                             onChange={(e) => setLicenseKeyInput(e.target.value)}
@@ -2468,7 +2527,7 @@ function LicenseSettingsFields({
                             hint="Default: https://license.eikon.id (hanya ubah jika menggunakan server on-premise)"
                         >
                             <Input
-                                disabled={isDemo}
+                                disabled={!canActivate}
                                 value={serverUrlInput}
                                 onChange={(e) => setServerUrlInput(e.target.value)}
                                 placeholder="https://license.eikon.id"
@@ -2480,7 +2539,7 @@ function LicenseSettingsFields({
                             hint="Kunci autentikasi server lisensi jika diperlukan"
                         >
                             <Input
-                                disabled={isDemo}
+                                disabled={!canActivate}
                                 type="password"
                                 value={apiKeyInput}
                                 onChange={(e) => setApiKeyInput(e.target.value)}
@@ -2493,7 +2552,7 @@ function LicenseSettingsFields({
                         <Button
                             type="submit"
                             loading={activateMutation.isPending}
-                            disabled={isDemo || !licenseKeyInput.trim()}
+                            disabled={!canActivate || !licenseKeyInput.trim()}
                         >
                             <KeyIcon className="w-4 h-4 mr-1.5" />
                             {isLicensed ? 'Simpan & Aktivasi Ulang' : 'Aktivasi Lisensi Sekarang'}
