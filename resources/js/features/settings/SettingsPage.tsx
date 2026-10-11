@@ -112,15 +112,15 @@ export default function SettingsPage() {
                 </div>
             )}
             <div className="grid grid-cols-1 lg:grid-cols-[200px_1fr] gap-6">
-                <Card>
-                    <CardBody className="space-y-1">
+                <Card className="lg:h-fit">
+                    <CardBody className="flex flex-row overflow-x-auto lg:flex-col lg:overflow-x-visible gap-1.5 p-2 sm:p-3">
                         {availableGroups.map((item) => (
                             <button
                                 key={item.key}
                                 onClick={() => setGroup(item.key)}
-                                className={`w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center gap-2.5 ${
+                                className={`shrink-0 lg:w-full text-left px-3 py-2 rounded-lg text-sm transition-colors flex items-center gap-2.5 whitespace-nowrap ${
                                     group === item.key
-                                        ? 'bg-indigo-50 text-indigo-700 font-medium'
+                                        ? 'bg-indigo-50 text-indigo-700 font-semibold shadow-xs'
                                         : 'hover:bg-gray-50 text-gray-700'
                                 }`}
                             >

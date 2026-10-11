@@ -61,14 +61,14 @@ export default function CustomerListPage() {
             />
 
             <div className="bg-white shadow rounded-lg">
-                <div className="px-5 py-3 border-b flex gap-3">
+                <div className="px-4 py-3 sm:px-5 border-b flex flex-col sm:flex-row gap-3">
                     <Input
                         placeholder="Search..."
-                        className="max-w-xs"
+                        className="w-full sm:max-w-xs"
                         onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
                     />
                     <Select
-                        className="max-w-[150px]"
+                        className="w-full sm:max-w-[150px]"
                         defaultValue=""
                         onChange={(e) => setFilters({ ...filters, status: e.target.value || undefined, page: 1 })}
                     >

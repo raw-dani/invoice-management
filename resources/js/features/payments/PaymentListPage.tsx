@@ -59,14 +59,14 @@ export default function PaymentListPage() {
             <PageHeader title="Payments" />
 
             <div className="bg-white shadow rounded-lg">
-                <div className="px-5 py-3 border-b flex gap-3 flex-wrap">
+                <div className="px-4 py-3 sm:px-5 border-b flex flex-col sm:flex-row gap-3 flex-wrap">
                     <Input
                         placeholder="Search payment # / reference..."
-                        className="max-w-xs"
+                        className="w-full sm:max-w-xs"
                         onChange={(e) => setFilters({ ...filters, search: e.target.value, page: 1 })}
                     />
                     <Select
-                        className="max-w-[180px]"
+                        className="w-full sm:max-w-[180px]"
                         defaultValue=""
                         onChange={(e) => setFilters({ ...filters, payment_method: e.target.value || undefined, page: 1 })}
                     >
@@ -74,13 +74,13 @@ export default function PaymentListPage() {
                     </Select>
                     <Input
                         type="date"
-                        className="max-w-[160px]"
+                        className="w-full sm:max-w-[160px]"
                         placeholder="From"
                         onChange={(e) => setFilters({ ...filters, from: e.target.value || undefined, page: 1 })}
                     />
                     <Input
                         type="date"
-                        className="max-w-[160px]"
+                        className="w-full sm:max-w-[160px]"
                         placeholder="To"
                         onChange={(e) => setFilters({ ...filters, to: e.target.value || undefined, page: 1 })}
                     />

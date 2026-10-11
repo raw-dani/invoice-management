@@ -96,6 +96,7 @@ class AuthController extends Controller
             'company'    => $user->company ? [
                 'id'    => $user->company->id,
                 'name'  => $user->company->name,
+                'logo'  => $user->company->logo,
             ] : null,
         ];
     }

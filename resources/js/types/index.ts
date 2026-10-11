@@ -9,6 +9,7 @@ export interface User {
     company?: {
         id: number;
         name: string;
+        logo?: string | null;
     };
 }
 

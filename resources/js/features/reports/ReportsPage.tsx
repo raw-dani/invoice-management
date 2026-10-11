@@ -178,7 +178,7 @@ export default function ReportsPage() {
             />
 
             {/* Tab Navigation Pill Bar */}
-            <div className="flex items-center gap-2 border-b border-gray-200 pb-2 overflow-x-auto">
+            <div className="flex items-center gap-2 border-b border-gray-200 pb-2.5 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0">
                 {TABS.map((item) => {
                     const isActive = tab === item.key;
                     return (
