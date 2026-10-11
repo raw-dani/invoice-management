@@ -9,6 +9,7 @@ import { ProductPicker } from '../../components/ProductPicker';
 import { QuickAddCustomer } from '../../components/QuickAddCustomer';
 import { formatMoney, classNames } from '../../lib/utils';
 import toast from '../../lib/toast';
+import { CheckIcon, PlusIcon, TrashIcon } from '../../components/ui/Icons';
 import type { Product } from '../../types';
 import type { QuoteInput } from '../../api/quotes';
 
@@ -173,7 +174,7 @@ export default function QuoteFormPage() {
                                     'w-6 h-6 rounded-full text-xs flex items-center justify-center',
                                     done ? 'bg-indigo-600 text-white' : active ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200'
                                 )}>
-                                    {done ? '✓' : num}
+                                    {done ? <CheckIcon className="w-3.5 h-3.5" /> : num}
                                 </span>
                                 <span className="text-sm font-medium">{label}</span>
                             </button>
@@ -260,14 +261,23 @@ export default function QuoteFormPage() {
                                             </td>
                                             <td className="py-2 text-right">{formatMoney(calcItemTotal(it), currency)}</td>
                                             <td className="py-2 text-center">
-                                                <button type="button" onClick={() => removeItem(i)}
-                                                    className="text-red-500 hover:text-red-700">×</button>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => removeItem(i)}
+                                                    className="text-gray-400 hover:text-red-600 transition p-1 rounded"
+                                                    title="Remove item"
+                                                >
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            <Button variant="secondary" size="sm" onClick={addItem}>+ Add Item</Button>
+                            <Button variant="secondary" size="sm" className="inline-flex items-center gap-1.5" onClick={addItem}>
+                                <PlusIcon className="w-4 h-4" />
+                                <span>Add Item</span>
+                            </Button>
                         </div>
                     )}
 

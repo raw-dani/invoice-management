@@ -8,6 +8,7 @@ import { Input } from '../../components/ui/Form';
 import { Modal } from '../../components/ui/Modal';
 import { formatMoney, formatDate } from '../../lib/utils';
 import toast from '../../lib/toast';
+import { CogIcon, PlusIcon, TargetIcon, DocumentTextIcon, RocketLaunchIcon } from '../../components/ui/Icons';
 import type { Quote, QuoteMilestone } from '../../types';
 
 interface MilestoneDraft {
@@ -133,8 +134,18 @@ export function QuoteMilestoneSection({ quote }: { quote: Quote }) {
                         </p>
                     </div>
                     <div>
-                        <Button size="sm" variant="secondary" onClick={openSetupModal}>
-                            {hasMilestones ? '⚙️ Atur Ulang Skema Termin' : '+ Aktifkan Termin / DP'}
+                        <Button size="sm" variant="secondary" className="inline-flex items-center gap-1.5" onClick={openSetupModal}>
+                            {hasMilestones ? (
+                                <>
+                                    <CogIcon className="w-4 h-4 text-gray-600" />
+                                    <span>Atur Ulang Skema Termin</span>
+                                </>
+                            ) : (
+                                <>
+                                    <PlusIcon className="w-4 h-4 text-gray-600" />
+                                    <span>Aktifkan Termin / DP</span>
+                                </>
+                            )}
                         </Button>
                     </div>
                 </div>
@@ -143,8 +154,8 @@ export function QuoteMilestoneSection({ quote }: { quote: Quote }) {
             <CardBody>
                 {!hasMilestones ? (
                     <div className="text-center py-8 border-2 border-dashed border-gray-200 rounded-xl bg-gray-50/60 p-6">
-                        <div className="w-12 h-12 mx-auto rounded-full bg-indigo-100 flex items-center justify-center text-2xl mb-3">
-                            🎯
+                        <div className="w-12 h-12 mx-auto rounded-full bg-indigo-100 flex items-center justify-center mb-3">
+                            <TargetIcon className="w-6 h-6 text-indigo-600" />
                         </div>
                         <h4 className="text-sm font-semibold text-gray-900">Belum Ada Skema Termin</h4>
                         <p className="text-xs text-gray-500 max-w-md mx-auto mt-1 mb-4">
@@ -235,7 +246,8 @@ export function QuoteMilestoneSection({ quote }: { quote: Quote }) {
                                                     to={`/invoices/${milestone.invoice_id}`}
                                                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold bg-white border border-emerald-300 text-emerald-800 hover:bg-emerald-50 shadow-2xs transition-colors"
                                                 >
-                                                    <span>📄 Invoice #{milestone.invoice_number || milestone.invoice_id}</span>
+                                                    <DocumentTextIcon className="w-3.5 h-3.5 text-emerald-600" />
+                                                    <span>Invoice #{milestone.invoice_number || milestone.invoice_id}</span>
                                                     {milestone.invoice_status && (
                                                         <span className="uppercase text-[10px] px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-900 font-bold">
                                                             {milestone.invoice_status}
@@ -247,12 +259,14 @@ export function QuoteMilestoneSection({ quote }: { quote: Quote }) {
                                                 <Button
                                                     size="sm"
                                                     variant="primary"
+                                                    className="inline-flex items-center gap-1.5"
                                                     disabled={generateInvoiceMutation.isPending}
                                                     loading={generateInvoiceMutation.isPending}
                                                     onClick={() => generateInvoiceMutation.mutate(milestone.id)}
                                                     title="Otomatis buatkan faktur/invoice untuk tahapan pembayaran ini"
                                                 >
-                                                    🚀 Buat Invoice Termin
+                                                    <RocketLaunchIcon className="w-4 h-4" />
+                                                    <span>Buat Invoice Termin</span>
                                                 </Button>
                                             )}
                                         </div>
@@ -360,8 +374,9 @@ export function QuoteMilestoneSection({ quote }: { quote: Quote }) {
                     </div>
 
                     <div className="flex justify-between items-center pt-2 border-t">
-                        <Button type="button" size="sm" variant="secondary" onClick={addDraftRow}>
-                            + Tambah Tahap Termin
+                        <Button type="button" size="sm" variant="secondary" className="inline-flex items-center gap-1" onClick={addDraftRow}>
+                            <PlusIcon className="w-3.5 h-3.5" />
+                            <span>Tambah Tahap Termin</span>
                         </Button>
                         <div className="text-right text-xs">
                             <span className="text-gray-500">Total Persentase: </span>

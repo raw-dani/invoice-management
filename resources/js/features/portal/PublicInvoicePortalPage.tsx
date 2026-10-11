@@ -6,6 +6,20 @@ import { formatMoney, formatDate } from '../../lib/utils';
 import { StatusBadge } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
 import { Input, Textarea, Field } from '../../components/ui/Form';
+import {
+    MagnifyingGlassIcon,
+    LinkIcon,
+    ArrowDownTrayIcon,
+    CreditCardIcon,
+    QrCodeIcon,
+    BuildingLibraryIcon,
+    DevicePhoneMobileIcon,
+    ClipboardDocumentCheckIcon,
+    ReceiptPercentIcon,
+    CheckIcon,
+    ClockIcon,
+    ExclamationTriangleIcon,
+} from '../../components/ui/Icons';
 import toast from '../../lib/toast';
 
 export default function PublicInvoicePortalPage() {
@@ -70,7 +84,9 @@ export default function PublicInvoicePortalPage() {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="max-w-md w-full bg-white p-6 rounded-xl border shadow-sm text-center space-y-3">
-                    <span className="text-4xl">🔍</span>
+                    <div className="w-12 h-12 mx-auto rounded-full bg-gray-100 flex items-center justify-center">
+                        <MagnifyingGlassIcon className="w-6 h-6 text-gray-400" />
+                    </div>
                     <h2 className="text-lg font-semibold text-gray-900">Invoice Tidak Ditemukan</h2>
                     <p className="text-xs text-gray-500">
                         Tautan yang Anda tuju mungkin salah atau telah kadaluarsa. Harap hubungi pihak penyedia layanan untuk informasi lebih lanjut.
@@ -112,16 +128,18 @@ export default function PublicInvoicePortalPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Button size="sm" variant="secondary" onClick={handleCopyLink}>
-                            🔗 Salin Tautan
+                        <Button size="sm" variant="secondary" onClick={handleCopyLink} className="inline-flex items-center gap-1.5">
+                            <LinkIcon className="w-4 h-4 text-gray-500" />
+                            <span>Salin Tautan</span>
                         </Button>
                         <a
                             href={`/api/public/invoices/${token}/pdf`}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center justify-center font-medium rounded-md text-sm transition-colors shadow-xs h-9 px-3 bg-indigo-600 text-white hover:bg-indigo-700"
+                            className="inline-flex items-center justify-center gap-1.5 font-medium rounded-md text-sm transition-colors shadow-xs h-9 px-3 bg-indigo-600 text-white hover:bg-indigo-700"
                         >
-                            📥 Download PDF
+                            <ArrowDownTrayIcon className="w-4 h-4" />
+                            <span>Download PDF</span>
                         </a>
                     </div>
                 </div>
@@ -263,8 +281,10 @@ export default function PublicInvoicePortalPage() {
                 {hasOnlineGateway && !isPaid && (
                     <div className="bg-gradient-to-r from-indigo-50/80 via-blue-50/60 to-purple-50/80 rounded-xl shadow-xs border border-indigo-100 p-6 space-y-3">
                         <div className="flex flex-wrap items-center justify-between gap-2">
-                            <div className="flex items-center gap-2">
-                                <span className="text-xl">💳</span>
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-100 flex items-center justify-center text-indigo-600 shrink-0">
+                                    <CreditCardIcon className="w-5 h-5" />
+                                </div>
                                 <div>
                                     <h3 className="font-semibold text-sm text-gray-950">Metode Pembayaran Online Otomatis</h3>
                                     <p className="text-xs text-gray-600">
@@ -279,17 +299,21 @@ export default function PublicInvoicePortalPage() {
                             )}
                         </div>
                         <div className="flex flex-wrap items-center gap-2 pt-1">
-                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
-                                📱 QRIS (Semua Bank &amp; E-Wallet)
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
+                                <QrCodeIcon className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>QRIS (Semua Bank &amp; E-Wallet)</span>
                             </span>
-                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
-                                🏛️ Virtual Account (BCA, Mandiri, BNI, BRI, Permata)
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
+                                <BuildingLibraryIcon className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>Virtual Account (BCA, Mandiri, BNI, BRI, Permata)</span>
                             </span>
-                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
-                                💳 Kartu Kredit &amp; Debit
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
+                                <CreditCardIcon className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>Kartu Kredit &amp; Debit</span>
                             </span>
-                            <span className="text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
-                                🛍️ E-Wallet (GoPay, OVO, Dana, ShopeePay)
+                            <span className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2.5 py-1 rounded-md bg-white border border-gray-200 text-gray-800 shadow-2xs">
+                                <DevicePhoneMobileIcon className="w-3.5 h-3.5 text-indigo-600" />
+                                <span>E-Wallet (GoPay, OVO, Dana, ShopeePay)</span>
                             </span>
                         </div>
                     </div>
@@ -299,7 +323,7 @@ export default function PublicInvoicePortalPage() {
                 {bank?.account_number && (
                     <div className="bg-white rounded-xl shadow-xs border p-6 space-y-3">
                         <div className="flex items-center gap-2">
-                            <span className="text-lg">🏦</span>
+                            <BuildingLibraryIcon className="w-5 h-5 text-gray-600" />
                             <h3 className="font-semibold text-sm text-gray-900">Rekening Tujuan Pembayaran</h3>
                         </div>
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 border rounded-lg">
@@ -314,8 +338,10 @@ export default function PublicInvoicePortalPage() {
                                 size="sm"
                                 variant="secondary"
                                 onClick={() => handleCopyAccount(bank.account_number!)}
+                                className="inline-flex items-center gap-1.5"
                             >
-                                📋 Salin Nomor Rekening
+                                <ClipboardDocumentCheckIcon className="w-4 h-4 text-gray-500" />
+                                <span>Salin Nomor Rekening</span>
                             </Button>
                         </div>
                         {bank.instructions && (
@@ -327,13 +353,15 @@ export default function PublicInvoicePortalPage() {
                 {/* Upload Payment Proof Section */}
                 <div className="bg-white rounded-xl shadow-xs border p-6 space-y-4">
                     <div className="flex items-center gap-2">
-                        <span className="text-lg">🧾</span>
+                        <ReceiptPercentIcon className="w-5 h-5 text-gray-600" />
                         <h3 className="font-semibold text-sm text-gray-900">Konfirmasi Bukti Transfer (Payment Proof)</h3>
                     </div>
 
                     {isPaid ? (
                         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-emerald-800 text-xs flex items-center gap-3">
-                            <span className="text-2xl">✅</span>
+                            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 shrink-0">
+                                <CheckIcon className="w-5 h-5" />
+                            </div>
                             <div>
                                 <strong className="font-semibold block text-sm">Invoice Telah Lunas</strong>
                                 Pembayaran untuk invoice ini telah diverifikasi dan lunas. Tidak diperlukan unggahan bukti lagi.
@@ -344,7 +372,9 @@ export default function PublicInvoicePortalPage() {
                             {isPendingProof && (
                                 <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg text-amber-900 text-xs flex items-center justify-between gap-3">
                                     <div className="flex items-center gap-3">
-                                        <span className="text-2xl">⏳</span>
+                                        <div className="w-8 h-8 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                                            <ClockIcon className="w-5 h-5" />
+                                        </div>
                                         <div>
                                             <strong className="font-semibold block">Bukti Pembayaran Sedang Diverifikasi</strong>
                                             Unggahan bukti transfer Anda sedang ditinjau oleh pihak admin. Kami akan memperbarui status invoice setelah konfirmasi selesai.
@@ -365,7 +395,9 @@ export default function PublicInvoicePortalPage() {
 
                             {isRejectedProof && (
                                 <div className="p-4 bg-rose-50 border border-rose-200 rounded-lg text-rose-900 text-xs flex items-center gap-3">
-                                    <span className="text-2xl">⚠️</span>
+                                    <div className="w-8 h-8 rounded-full bg-rose-100 flex items-center justify-center text-rose-600 shrink-0">
+                                        <ExclamationTriangleIcon className="w-5 h-5" />
+                                    </div>
                                     <div>
                                         <strong className="font-semibold block">Bukti Pembayaran Ditolak</strong>
                                         {invoice.payment_proof_notes || 'Bukti transfer tidak sesuai atau tidak terbaca.'} Silakan unggah bukti transfer yang valid di bawah ini.

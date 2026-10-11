@@ -6,6 +6,13 @@ import { formatMoney, formatDate } from '../../lib/utils';
 import { StatusBadge } from '../../components/ui/Display';
 import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
+import {
+    MagnifyingGlassIcon,
+    LinkIcon,
+    ArrowDownTrayIcon,
+    CheckIcon,
+    ExclamationCircleIcon,
+} from '../../components/ui/Icons';
 import toast from '../../lib/toast';
 
 export default function PublicQuotePortalPage() {
@@ -64,7 +71,9 @@ export default function PublicQuotePortalPage() {
         return (
             <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
                 <div className="max-w-md w-full bg-white p-6 rounded-xl border shadow-sm text-center space-y-3">
-                    <span className="text-4xl">🔍</span>
+                    <div className="w-12 h-12 mx-auto rounded-full bg-gray-100 flex items-center justify-center">
+                        <MagnifyingGlassIcon className="w-6 h-6 text-gray-400" />
+                    </div>
                     <h2 className="text-lg font-semibold text-gray-900">Penawaran Tidak Ditemukan</h2>
                     <p className="text-xs text-gray-500">
                         Tautan penawaran yang Anda tuju mungkin salah atau telah kadaluarsa.
@@ -92,16 +101,18 @@ export default function PublicQuotePortalPage() {
                     </div>
 
                     <div className="flex items-center gap-2">
-                        <Button size="sm" variant="secondary" onClick={handleCopyLink}>
-                            🔗 Salin Tautan
+                        <Button size="sm" variant="secondary" className="inline-flex items-center gap-1.5" onClick={handleCopyLink}>
+                            <LinkIcon className="w-4 h-4" />
+                            <span>Salin Tautan</span>
                         </Button>
                         <a
                             href={`/api/public/quotes/${token}/pdf`}
                             target="_blank"
                             rel="noreferrer"
-                            className="inline-flex items-center justify-center font-medium rounded-md text-sm transition-colors shadow-xs h-9 px-3 bg-indigo-600 text-white hover:bg-indigo-700"
+                            className="inline-flex items-center justify-center gap-1.5 font-medium rounded-md text-sm transition-colors shadow-xs h-9 px-3 bg-indigo-600 text-white hover:bg-indigo-700"
                         >
-                            📥 Download PDF
+                            <ArrowDownTrayIcon className="w-4 h-4" />
+                            <span>Download PDF</span>
                         </a>
                     </div>
                 </div>
@@ -109,7 +120,9 @@ export default function PublicQuotePortalPage() {
                 {/* Status Notice Banner if Responded */}
                 {quote.status === 'accepted' && (
                     <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-xl text-emerald-800 text-xs flex items-center gap-3">
-                        <span className="text-2xl">🎉</span>
+                        <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center shrink-0">
+                            <CheckIcon className="w-5 h-5 text-emerald-600" />
+                        </div>
                         <div>
                             <strong className="font-semibold block text-sm">Penawaran Telah Anda Setujui</strong>
                             Terima kasih atas persetujuan Anda! Pihak kami akan segera menghubungi Anda untuk langkah selanjutnya dan penerbitan invoice resmi.
@@ -119,7 +132,9 @@ export default function PublicQuotePortalPage() {
 
                 {quote.status === 'rejected' && (
                     <div className="p-4 bg-gray-50 border border-gray-200 rounded-xl text-gray-700 text-xs flex items-center gap-3">
-                        <span className="text-2xl">ℹ️</span>
+                        <div className="w-8 h-8 rounded-full bg-gray-100 flex items-center justify-center shrink-0">
+                            <ExclamationCircleIcon className="w-5 h-5 text-gray-500" />
+                        </div>
                         <div>
                             <strong className="font-semibold block text-sm">Penawaran Telah Ditolak</strong>
                             Status penawaran ini telah ditandai ditolak. Silakan hubungi kami apabila Anda membutuhkan revisi atau negosiasi ulang.
@@ -269,9 +284,10 @@ export default function PublicQuotePortalPage() {
                             <Button
                                 size="sm"
                                 onClick={() => setConfirmAccept(true)}
-                                className="flex-1 sm:flex-initial bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
+                                className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-medium"
                             >
-                                ✓ Setujui Penawaran
+                                <CheckIcon className="w-4 h-4" />
+                                <span>Setujui Penawaran</span>
                             </Button>
                         </div>
                     </div>

@@ -15,6 +15,7 @@ import { useBulkDelete, useBulkAction } from '../../components/bulk/useBulk';
 import { BulkBar } from '../../components/bulk/BulkBar';
 import { reportBulkDelete, reportBulkResult } from '../../components/bulk/result';
 import { WhatsAppShareModal, WhatsAppShareData } from '../../components/WhatsAppShareModal';
+import { PlusIcon, WhatsAppIcon, TrashIcon } from '../../components/ui/Icons';
 
 const STATUSES = ['draft', 'sent', 'viewed', 'accepted', 'rejected', 'expired', 'converted'];
 
@@ -62,7 +63,14 @@ export default function QuoteListPage() {
         <>
             <PageHeader
                 title="Quotes"
-                actions={<Link to="/quotes/new"><Button>+ Create Quote</Button></Link>}
+                actions={
+                    <Link to="/quotes/new">
+                        <Button className="inline-flex items-center">
+                            <PlusIcon className="w-4 h-4 mr-1.5" />
+                            Create Quote
+                        </Button>
+                    </Link>
+                }
             />
 
             <div className="bg-white shadow rounded-lg">
@@ -102,7 +110,14 @@ export default function QuoteListPage() {
                 ) : !data?.data.length ? (
                     <EmptyState
                         title="No quotes yet"
-                        action={<Link to="/quotes/new"><Button>+ Create Quote</Button></Link>}
+                        action={
+                            <Link to="/quotes/new">
+                                <Button className="inline-flex items-center">
+                                    <PlusIcon className="w-4 h-4 mr-1.5" />
+                                    Create Quote
+                                </Button>
+                            </Link>
+                        }
                     />
                 ) : (
                     <>
@@ -148,16 +163,19 @@ export default function QuoteListPage() {
                                                         publicToken: q.public_token,
                                                     });
                                                 }}
-                                                className="p-1 rounded hover:bg-emerald-50 text-emerald-600 transition text-sm font-medium"
+                                                className="inline-flex items-center gap-1 px-2 py-1 rounded-md hover:bg-emerald-50 text-emerald-700 border border-emerald-200 transition text-xs font-semibold"
                                                 title="Kirim via WhatsApp"
                                             >
-                                                💬 WA
+                                                <WhatsAppIcon className="w-3.5 h-3.5 text-emerald-600" />
+                                                <span>WhatsApp</span>
                                             </button>
                                             <button
                                                 onClick={(e) => { e.stopPropagation(); setDeleteId(q.id); }}
-                                                className="text-red-600 hover:text-red-700 text-sm"
+                                                className="inline-flex items-center gap-1 text-red-600 hover:text-red-700 hover:bg-red-50 px-2 py-1 rounded text-xs font-medium transition"
+                                                title="Delete quote"
                                             >
-                                                Delete
+                                                <TrashIcon className="w-3.5 h-3.5" />
+                                                <span>Delete</span>
                                             </button>
                                         </div>
                                     ),

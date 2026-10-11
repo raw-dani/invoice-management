@@ -10,6 +10,7 @@ import { QuickAddCustomer } from '../../components/QuickAddCustomer';
 import { Modal } from '../../components/ui/Modal';
 import { formatMoney, classNames } from '../../lib/utils';
 import toast from '../../lib/toast';
+import { CheckIcon, PlusIcon, TrashIcon, TargetIcon } from '../../components/ui/Icons';
 import type { Product } from '../../types';
 import type { InvoiceInput } from '../../api/invoices';
 
@@ -193,7 +194,7 @@ export default function InvoiceFormPage() {
                                     'w-6 h-6 rounded-full text-xs flex items-center justify-center',
                                     done ? 'bg-indigo-600 text-white' : active ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-200'
                                 )}>
-                                    {done ? '✓' : num}
+                                    {done ? <CheckIcon className="w-3.5 h-3.5" /> : num}
                                 </span>
                                 <span className="text-sm font-medium">{label}</span>
                             </button>
@@ -299,14 +300,20 @@ export default function InvoiceFormPage() {
                                                 <button
                                                     type="button"
                                                     onClick={() => removeItem(i)}
-                                                    className="text-red-500 hover:text-red-700"
-                                                >×</button>
+                                                    className="text-gray-400 hover:text-red-600 transition p-1 rounded"
+                                                    title="Remove item"
+                                                >
+                                                    <TrashIcon className="w-4 h-4" />
+                                                </button>
                                             </td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
-                            <Button variant="secondary" size="sm" onClick={addItem}>+ Add Item</Button>
+                            <Button variant="secondary" size="sm" className="inline-flex items-center gap-1.5" onClick={addItem}>
+                                <PlusIcon className="w-4 h-4" />
+                                <span>Add Item</span>
+                            </Button>
                         </div>
                     )}
 
@@ -424,7 +431,10 @@ export default function InvoiceFormPage() {
                                 <strong>Date:</strong> {invoiceDate} · <strong>Due:</strong> {dueDate}
                                 {milestoneName && (
                                     <div className="mt-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-indigo-50 border border-indigo-200 text-xs text-indigo-900 font-medium">
-                                        <span>🎯 {milestoneName}</span>
+                                        <span className="inline-flex items-center gap-1">
+                                            <TargetIcon className="w-3.5 h-3.5 text-indigo-600" />
+                                            <span>{milestoneName}</span>
+                                        </span>
                                         {milestoneSequence && milestoneTotalTermins && (
                                             <span>(Tahap {milestoneSequence}/{milestoneTotalTermins})</span>
                                         )}
