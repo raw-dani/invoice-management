@@ -68,6 +68,11 @@ class SettingsController extends Controller
             'attribute_mapping_email',
             'attribute_mapping_name',
         ],
+        'license' => [
+            'license_key',
+            'license_server_url',
+            'license_api_key',
+        ],
     ];
 
     public function show(string $group): JsonResponse

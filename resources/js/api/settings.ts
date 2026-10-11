@@ -1,6 +1,31 @@
 import api from './client';
 
-export type SettingsGroup = 'company' | 'invoice' | 'quote' | 'email' | 'payment' | 'saml' | 'demo_data';
+export type SettingsGroup = 'company' | 'invoice' | 'quote' | 'email' | 'payment' | 'saml' | 'license' | 'demo_data';
+
+export interface LicenseStatus {
+    is_licensed: boolean;
+    status: 'active' | 'unlicensed' | 'expired' | 'invalid_machine' | 'offline_grace';
+    status_message: string;
+    license_key: string | null;
+    masked_license_key: string | null;
+    expires_at: string | null;
+    last_checked: string | null;
+    server_url: string;
+    api_key: string | null;
+    registered_domain: string | null;
+    current_domain: string;
+    install_id: string;
+    registered_install_id: string | null;
+    fingerprint: string;
+    grace_period_hours: number;
+    device_info: {
+        hostname: string;
+        os: string;
+        php_version: string;
+        server_ip: string;
+        app_root: string;
+    };
+}
 
 export interface DemoDataStats {
     has_demo_data: boolean;
@@ -23,6 +48,14 @@ export const settingsApi = {
         api.post<{ success: boolean; data: any }>('/saml/test', data).then((r) => r.data),
     getSamlStatus: () =>
         api.get<{ enabled: boolean; idp_name: string; login_url: string }>('/saml/status').then((r) => r.data),
+    getLicenseStatus: () =>
+        api.get<{ data: LicenseStatus }>('/settings/license/status').then((r) => r.data.data),
+    activateLicense: (data: { license_key: string; server_url?: string; api_key?: string }) =>
+        api.post<{ message: string; data: LicenseStatus }>('/settings/license/activate', data).then((r) => r.data),
+    verifyLicense: () =>
+        api.post<{ message: string; data: LicenseStatus }>('/settings/license/verify').then((r) => r.data),
+    revokeLicense: () =>
+        api.post<{ message: string; data: LicenseStatus }>('/settings/license/revoke').then((r) => r.data),
     uploadLogo: (file: File) => {
         const form = new FormData();
         form.append('logo', file);

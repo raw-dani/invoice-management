@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from '../../lib/toast';
+import { formatDate } from '../../lib/utils';
 import {
     BuildingOfficeIcon,
     DocumentTextIcon,
@@ -28,6 +29,12 @@ import {
     CheckCircleIcon,
     ExclamationCircleIcon,
     KeyIcon,
+    ArrowPathIcon,
+    TrashIcon,
+    ClipboardDocumentCheckIcon,
+    EyeIcon,
+    EyeSlashIcon,
+    ClockIcon,
 } from '../../components/ui/Icons';
 
 const GROUPS: Array<{ key: SettingsGroup; label: string; icon: React.ReactNode }> = [
@@ -37,6 +44,7 @@ const GROUPS: Array<{ key: SettingsGroup; label: string; icon: React.ReactNode }
     { key: 'email', label: 'Email', icon: <EnvelopeIcon className="w-4 h-4" /> },
     { key: 'payment', label: 'Payment & Gateway', icon: <CreditCardIcon className="w-4 h-4" /> },
     { key: 'saml', label: 'SAML SSO', icon: <ShieldCheckIcon className="w-4 h-4" /> },
+    { key: 'license', label: 'Lisensi Aplikasi', icon: <KeyIcon className="w-4 h-4" /> },
 ];
 
 export default function SettingsPage() {
@@ -149,7 +157,7 @@ export default function SettingsPage() {
                         ) : query.isLoading ? (
                             <div className="text-sm text-gray-500 py-4">Loading...</div>
                         ) : (
-                            <div className="space-y-4 max-w-2xl">
+                            <div className={`space-y-4 ${['saml', 'license'].includes(group) ? 'max-w-3xl' : 'max-w-2xl'}`}>
                                 {group === 'company' ? (
                                     <CompanyFields
                                         values={values}
@@ -163,11 +171,13 @@ export default function SettingsPage() {
                                     />
                                 ) : group === 'saml' ? (
                                     <SamlSettingsFields values={values} update={update} isDemo={isDemo} />
+                                ) : group === 'license' ? (
+                                    <LicenseSettingsFields values={values} update={update} isDemo={isDemo} />
                                 ) : (
                                     <GroupFields group={group} values={values} update={update} isDemo={isDemo} />
                                 )}
                                 {group === 'email' && <TestEmail isDemo={isDemo} />}
-                                {!isDemo && (
+                                {!isDemo && group !== 'license' && (
                                     <div className="flex justify-end gap-2 pt-2">
                                         <Button loading={save.isPending} onClick={() => save.mutate()}>
                                             Save Changes
@@ -2190,6 +2200,398 @@ function SamlSettingsFields({
                     </Field>
                 </div>
             </div>
+        </div>
+    );
+}
+
+function LicenseSettingsFields({
+    values,
+    update,
+    isDemo,
+}: {
+    values: Record<string, any>;
+    update: (key: string, value: any) => void;
+    isDemo?: boolean;
+}) {
+    const queryClient = useQueryClient();
+    const [copiedKey, setCopiedKey] = useState<string | null>(null);
+    const [showKey, setShowKey] = useState(false);
+    const [confirmRevoke, setConfirmRevoke] = useState(false);
+    const [licenseKeyInput, setLicenseKeyInput] = useState(values.license_key || '');
+    const [serverUrlInput, setServerUrlInput] = useState(values.license_server_url || '');
+    const [apiKeyInput, setApiKeyInput] = useState(values.license_api_key || '');
+
+    const { data: license, isLoading } = useQuery({
+        queryKey: ['license_status'],
+        queryFn: settingsApi.getLicenseStatus,
+    });
+
+    useEffect(() => {
+        if (values.license_key !== undefined) setLicenseKeyInput(values.license_key || '');
+        if (values.license_server_url !== undefined) setServerUrlInput(values.license_server_url || '');
+        if (values.license_api_key !== undefined) setApiKeyInput(values.license_api_key || '');
+    }, [values.license_key, values.license_server_url, values.license_api_key]);
+
+    const activateMutation = useMutation({
+        mutationFn: settingsApi.activateLicense,
+        onSuccess: (data) => {
+            toast.success(data.message || 'Lisensi berhasil diaktivasi!');
+            queryClient.invalidateQueries({ queryKey: ['license_status'] });
+            queryClient.invalidateQueries({ queryKey: ['settings_group', 'license'] });
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || 'Aktivasi lisensi gagal. Periksa kembali kunci lisensi dan koneksi server.');
+        },
+    });
+
+    const verifyMutation = useMutation({
+        mutationFn: settingsApi.verifyLicense,
+        onSuccess: (data) => {
+            toast.success(data.message || 'Lisensi valid dan terverifikasi!');
+            queryClient.invalidateQueries({ queryKey: ['license_status'] });
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || 'Verifikasi lisensi gagal.');
+        },
+    });
+
+    const revokeMutation = useMutation({
+        mutationFn: settingsApi.revokeLicense,
+        onSuccess: (data) => {
+            toast.success(data.message || 'Lisensi berhasil dicabut dari server.');
+            queryClient.invalidateQueries({ queryKey: ['license_status'] });
+            queryClient.invalidateQueries({ queryKey: ['settings_group', 'license'] });
+            setConfirmRevoke(false);
+            setLicenseKeyInput('');
+            update('license_key', '');
+        },
+        onError: (err: any) => {
+            toast.error(err?.response?.data?.message || 'Gagal mencabut lisensi.');
+        },
+    });
+
+    const handleCopy = (text: string, label: string) => {
+        if (!text) return;
+        navigator.clipboard.writeText(text);
+        setCopiedKey(label);
+        toast.success(`${label} disalin ke clipboard`);
+        setTimeout(() => setCopiedKey(null), 2500);
+    };
+
+    const handleActivate = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!licenseKeyInput.trim()) {
+            toast.error('Masukkan Kunci Lisensi (License Key) terlebih dahulu');
+            return;
+        }
+
+        update('license_key', licenseKeyInput.trim());
+        if (serverUrlInput) update('license_server_url', serverUrlInput.trim());
+        if (apiKeyInput) update('license_api_key', apiKeyInput.trim());
+
+        activateMutation.mutate({
+            license_key: licenseKeyInput.trim(),
+            server_url: serverUrlInput.trim() || undefined,
+            api_key: apiKeyInput.trim() || undefined,
+        });
+    };
+
+    if (isLoading) {
+        return (
+            <div className="flex items-center justify-center p-8 text-gray-500 text-sm">
+                <ArrowPathIcon className="w-5 h-5 animate-spin mr-2 text-indigo-600" />
+                Memeriksa status lisensi sistem...
+            </div>
+        );
+    }
+
+    const isLicensed = Boolean(license?.is_licensed);
+    const statusType = license?.status || 'unlicensed';
+
+    return (
+        <div className="space-y-6">
+            {/* Status Banner Card */}
+            <div className="bg-white rounded-xl border border-gray-200 overflow-hidden shadow-2xs">
+                <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                    <div className="space-y-1">
+                        <div className="flex items-center gap-2.5">
+                            <h4 className="text-base font-semibold text-gray-900">Status Lisensi Sistem</h4>
+                            {statusType === 'active' && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                    <CheckCircleIcon className="w-3.5 h-3.5 text-emerald-600" /> Aktif & Terverifikasi
+                                </span>
+                            )}
+                            {statusType === 'offline_grace' && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                                    <ClockIcon className="w-3.5 h-3.5 text-amber-600" /> Grace Period Offline
+                                </span>
+                            )}
+                            {statusType === 'expired' && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-red-50 text-red-700 border border-red-200">
+                                    <ExclamationCircleIcon className="w-3.5 h-3.5 text-red-600" /> Lisensi Kedaluwarsa
+                                </span>
+                            )}
+                            {statusType === 'invalid_machine' && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                                    <ExclamationCircleIcon className="w-3.5 h-3.5 text-rose-600" /> Mesin Tidak Cocok
+                                </span>
+                            )}
+                            {statusType === 'unlicensed' && (
+                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-gray-100 text-gray-700 border border-gray-300">
+                                    <KeyIcon className="w-3.5 h-3.5 text-gray-500" /> Belum Berlisensi
+                                </span>
+                            )}
+                        </div>
+                        <p className="text-xs text-gray-500">
+                            {license?.status_message || 'Aplikasi membutuhkan lisensi aktif untuk mendapatkan dukungan teknis dan pembaruan.'}
+                        </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                        <Button
+                            type="button"
+                            variant="secondary"
+                            size="sm"
+                            loading={verifyMutation.isPending}
+                            disabled={!isLicensed || isDemo}
+                            onClick={() => verifyMutation.mutate()}
+                            title="Verifikasi keabsahan lisensi secara langsung ke server pusat"
+                        >
+                            <ArrowPathIcon className="w-3.5 h-3.5 mr-1" />
+                            Verifikasi Ulang
+                        </Button>
+                        {isLicensed && (
+                            <Button
+                                type="button"
+                                variant="danger"
+                                size="sm"
+                                disabled={isDemo}
+                                onClick={() => setConfirmRevoke(true)}
+                                title="Cabut lisensi dari server ini"
+                            >
+                                <TrashIcon className="w-3.5 h-3.5 mr-1" />
+                                Cabut Lisensi
+                            </Button>
+                        )}
+                    </div>
+                </div>
+
+                {/* Details Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-gray-100 bg-gray-50/50">
+                    <div className="p-4 space-y-1">
+                        <span className="text-xs font-medium text-gray-500 block">Kunci Lisensi Terdaftar</span>
+                        <div className="flex items-center gap-1.5">
+                            <span className="font-mono text-xs font-bold text-gray-900 tracking-wider">
+                                {showKey
+                                    ? (license?.license_key || '-')
+                                    : (license?.masked_license_key || license?.license_key || 'Belum ada')}
+                            </span>
+                            {license?.license_key && (
+                                <div className="flex items-center gap-0.5 ml-auto">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowKey(!showKey)}
+                                        className="p-1 text-gray-400 hover:text-gray-600 rounded"
+                                        title={showKey ? 'Sembunyikan Kunci' : 'Tampilkan Kunci'}
+                                    >
+                                        {showKey ? <EyeSlashIcon className="w-3.5 h-3.5" /> : <EyeIcon className="w-3.5 h-3.5" />}
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => handleCopy(license.license_key!, 'Kunci Lisensi')}
+                                        className="p-1 text-gray-400 hover:text-indigo-600 rounded"
+                                        title="Salin Kunci Lisensi"
+                                    >
+                                        <ClipboardDocumentCheckIcon className="w-3.5 h-3.5" />
+                                    </button>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <div className="p-4 space-y-1">
+                        <span className="text-xs font-medium text-gray-500 block">Masa Berlaku</span>
+                        <span className="text-xs font-semibold text-gray-800 block">
+                            {license?.expires_at
+                                ? formatDate(license.expires_at)
+                                : isLicensed
+                                ? 'Seumur Hidup (Lifetime)'
+                                : '-'}
+                        </span>
+                    </div>
+
+                    <div className="p-4 space-y-1">
+                        <span className="text-xs font-medium text-gray-500 block">Terakhir Diverifikasi</span>
+                        <span className="text-xs font-semibold text-gray-800 block">
+                            {license?.last_checked ? formatDate(license.last_checked) : '-'}
+                        </span>
+                    </div>
+
+                    <div className="p-4 space-y-1">
+                        <span className="text-xs font-medium text-gray-500 block">Domain Terdaftar</span>
+                        <span className="text-xs font-semibold text-gray-800 block truncate" title={license?.registered_domain || license?.current_domain}>
+                            {license?.registered_domain || license?.current_domain || '-'}
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Activation Form */}
+            <form onSubmit={handleActivate} className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 shadow-2xs">
+                <div className="border-b border-gray-200 pb-3">
+                    <h4 className="text-sm font-bold text-gray-900">
+                        {isLicensed ? 'Perbarui Kunci Lisensi' : 'Aktivasi Lisensi Baru'}
+                    </h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        Masukkan kunci lisensi produk resmi untuk mengaktifkan fitur dan menerima pembaruan software.
+                    </p>
+                </div>
+
+                <div className="space-y-4">
+                    <Field
+                        label="Kunci Lisensi (License Key)"
+                        required
+                        hint="Format standar: INVOICE-XXXX-XXXX-XXXX-XXXX"
+                    >
+                        <Input
+                            disabled={isDemo}
+                            className="font-mono uppercase tracking-wider"
+                            value={licenseKeyInput}
+                            onChange={(e) => setLicenseKeyInput(e.target.value)}
+                            placeholder="INVOICE-XXXX-XXXX-XXXX-XXXX"
+                        />
+                    </Field>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                        <Field
+                            label="URL Server Lisensi"
+                            hint="Default: https://license.eikon.id (hanya ubah jika menggunakan server on-premise)"
+                        >
+                            <Input
+                                disabled={isDemo}
+                                value={serverUrlInput}
+                                onChange={(e) => setServerUrlInput(e.target.value)}
+                                placeholder="https://license.eikon.id"
+                            />
+                        </Field>
+
+                        <Field
+                            label="API Key Server Lisensi (Opsional)"
+                            hint="Kunci autentikasi server lisensi jika diperlukan"
+                        >
+                            <Input
+                                disabled={isDemo}
+                                type="password"
+                                value={apiKeyInput}
+                                onChange={(e) => setApiKeyInput(e.target.value)}
+                                placeholder="Opsional (Bearer token / API Secret)"
+                            />
+                        </Field>
+                    </div>
+
+                    <div className="flex justify-end pt-2">
+                        <Button
+                            type="submit"
+                            loading={activateMutation.isPending}
+                            disabled={isDemo || !licenseKeyInput.trim()}
+                        >
+                            <KeyIcon className="w-4 h-4 mr-1.5" />
+                            {isLicensed ? 'Simpan & Aktivasi Ulang' : 'Aktivasi Lisensi Sekarang'}
+                        </Button>
+                    </div>
+                </div>
+            </form>
+
+            {/* Hardware & Machine Identity Card */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 shadow-2xs">
+                <div className="border-b border-gray-200 pb-3 flex items-start gap-3">
+                    <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg shrink-0">
+                        <ServerIcon className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h4 className="text-sm font-bold text-gray-900">Identitas Mesin & Tanda Tangan Hardware (Install ID)</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            Kombinasi unik perangkat keras dan lingkungan server yang mengikat lisensi aplikasi secara kriptografis.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-blue-50/60 border border-blue-100 rounded-lg p-3.5 flex items-start gap-3 text-xs text-blue-900">
+                    <ShieldCheckIcon className="w-4 h-4 text-blue-600 mt-0.5 shrink-0" />
+                    <div>
+                        <span className="font-semibold block mb-0.5">Proteksi & Toleransi Jaringan</span>
+                        Lisensi ini diikat ke <strong>Install ID</strong> perangkat di bawah ini. Dilengkapi dengan toleransi <strong>24 Jam Grace Period</strong>, sehingga aplikasi tetap berjalan normal meskipun server lisensi pusat sedang offline atau terjadi gangguan koneksi internet sementara.
+                    </div>
+                </div>
+
+                <div className="space-y-3">
+                    <div>
+                        <label className="block text-xs font-semibold text-gray-700 mb-1">
+                            Install ID Server (Hardware Fingerprint)
+                        </label>
+                        <div className="flex items-center gap-2">
+                            <div className="bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 font-mono text-xs text-gray-800 break-all select-all flex-1">
+                                {license?.install_id || 'Generating...'}
+                            </div>
+                            <Button
+                                type="button"
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleCopy(license?.install_id || '', 'Install ID')}
+                                title="Salin Install ID"
+                            >
+                                <ClipboardDocumentCheckIcon className="w-4 h-4 mr-1" />
+                                {copiedKey === 'Install ID' ? 'Disalin!' : 'Salin'}
+                            </Button>
+                        </div>
+                        <p className="text-2xs text-gray-400 mt-1">
+                            Berikan Install ID ini ke tim support saat melakukan migrasi server atau pendaftaran lisensi manual.
+                        </p>
+                    </div>
+
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <span className="text-2xs text-gray-400 uppercase tracking-wider font-semibold block">Hostname</span>
+                            <span className="text-xs font-medium text-gray-800 block truncate" title={license?.device_info?.hostname}>
+                                {license?.device_info?.hostname || '-'}
+                            </span>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <span className="text-2xs text-gray-400 uppercase tracking-wider font-semibold block">Sistem Operasi</span>
+                            <span className="text-xs font-medium text-gray-800 block truncate" title={license?.device_info?.os}>
+                                {license?.device_info?.os || '-'}
+                            </span>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <span className="text-2xs text-gray-400 uppercase tracking-wider font-semibold block">Versi PHP</span>
+                            <span className="text-xs font-medium text-gray-800 block">
+                                {license?.device_info?.php_version || '-'}
+                            </span>
+                        </div>
+
+                        <div className="bg-gray-50 rounded-lg p-3 border border-gray-100">
+                            <span className="text-2xs text-gray-400 uppercase tracking-wider font-semibold block">Domain Aktif</span>
+                            <span className="text-xs font-medium text-gray-800 block truncate" title={license?.current_domain}>
+                                {license?.current_domain || '-'}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Revoke Confirmation Dialog */}
+            <ConfirmDialog
+                open={confirmRevoke}
+                title="Cabut Lisensi Aplikasi?"
+                message="Apakah Anda yakin ingin mencabut lisensi dari server ini? Kunci lisensi lokal akan dihapus dan server akan kembali ke status belum berlisensi. Anda dapat mengaktifkannya kembali kapan saja."
+                confirmText="Ya, Cabut Lisensi"
+                cancelText="Batal"
+                danger
+                onConfirm={() => revokeMutation.mutate()}
+                onCancel={() => setConfirmRevoke(false)}
+            />
         </div>
     );
 }

@@ -22,6 +22,7 @@ use App\Http\Controllers\Api\PublicPortalController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\SamlController;
+use App\Http\Controllers\Api\LicenseController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -149,6 +150,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('settings/{group}', [SettingsController::class, 'update'])->middleware('role:owner,admin');
     Route::post('settings/email/test', [SettingsController::class, 'testEmail'])->middleware('role:owner,admin');
     Route::post('saml/test',          [SamlController::class, 'test'])->middleware('role:owner,admin');
+    Route::get('settings/license/status',    [LicenseController::class, 'status'])->middleware('role:owner,admin,demo');
+    Route::post('settings/license/activate', [LicenseController::class, 'activate'])->middleware('role:owner,admin');
+    Route::post('settings/license/verify',   [LicenseController::class, 'verify'])->middleware('role:owner,admin');
+    Route::post('settings/license/revoke',   [LicenseController::class, 'revoke'])->middleware('role:owner,admin');
     Route::post('company/logo',      [SettingsController::class, 'uploadLogo'])->middleware('role:owner,admin');
     Route::post('company/signature', [SettingsController::class, 'uploadSignature'])->middleware('role:owner,admin');
     Route::post('company/stamp',     [SettingsController::class, 'uploadStamp'])->middleware('role:owner,admin');
