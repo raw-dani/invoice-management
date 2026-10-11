@@ -1,6 +1,6 @@
 import api from './client';
 
-export type SettingsGroup = 'company' | 'invoice' | 'quote' | 'email' | 'payment' | 'demo_data';
+export type SettingsGroup = 'company' | 'invoice' | 'quote' | 'email' | 'payment' | 'saml' | 'demo_data';
 
 export interface DemoDataStats {
     has_demo_data: boolean;
@@ -19,6 +19,10 @@ export const settingsApi = {
     get: (group: Exclude<SettingsGroup, 'demo_data'>) => api.get<{ data: Record<string, string | null> }>(`/settings/${group}`).then((r) => r.data.data),
     update: (group: Exclude<SettingsGroup, 'demo_data'>, data: Record<string, string | null>) => api.put(`/settings/${group}`, data).then((r) => r.data.data),
     testEmail: (to: string) => api.post('/settings/email/test', { to }),
+    testSaml: (data: { idp_entity_id: string; idp_sso_url: string; idp_x509_cert: string }) =>
+        api.post<{ success: boolean; data: any }>('/saml/test', data).then((r) => r.data),
+    getSamlStatus: () =>
+        api.get<{ enabled: boolean; idp_name: string; login_url: string }>('/saml/status').then((r) => r.data),
     uploadLogo: (file: File) => {
         const form = new FormData();
         form.append('logo', file);

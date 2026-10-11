@@ -56,6 +56,18 @@ class SettingsController extends Controller
             'duitku_merchant_code',
             'duitku_api_key',
         ],
+        'saml' => [
+            'saml_enabled',
+            'idp_entity_id',
+            'idp_sso_url',
+            'idp_slo_url',
+            'idp_x509_cert',
+            'sp_entity_id',
+            'auto_provision_users',
+            'default_role',
+            'attribute_mapping_email',
+            'attribute_mapping_name',
+        ],
     ];
 
     public function show(string $group): JsonResponse

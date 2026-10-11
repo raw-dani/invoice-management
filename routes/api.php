@@ -21,6 +21,7 @@ use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\PublicPortalController;
 use App\Http\Controllers\Api\SearchController;
 use App\Http\Controllers\Api\UserController;
+use App\Http\Controllers\Api\SamlController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -50,6 +51,13 @@ Route::post('webhooks/payment/{gateway}', [\App\Http\Controllers\Api\PaymentWebh
 // Public auth
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:auth');
 Route::post('/auth/login',    [AuthController::class, 'login'])->middleware('throttle:auth');
+
+// SAML 2.0 Single Sign-On (SSO) Endpoints (Google Workspace, Azure AD, Okta)
+Route::get('saml/status', [SamlController::class, 'status']);
+Route::get('saml/metadata', [SamlController::class, 'metadata'])->name('saml.metadata');
+Route::get('saml/login', [SamlController::class, 'login'])->name('saml.login');
+Route::post('saml/acs', [SamlController::class, 'acs'])->name('saml.acs');
+Route::match(['get', 'post'], 'saml/sls', [SamlController::class, 'sls'])->name('saml.sls');
 
 // Protected (Sanctum)
 Route::middleware('auth:sanctum')->group(function () {
@@ -140,6 +148,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('settings/{group}', [SettingsController::class, 'show']);
     Route::put('settings/{group}', [SettingsController::class, 'update'])->middleware('role:owner,admin');
     Route::post('settings/email/test', [SettingsController::class, 'testEmail'])->middleware('role:owner,admin');
+    Route::post('saml/test',          [SamlController::class, 'test'])->middleware('role:owner,admin');
     Route::post('company/logo',      [SettingsController::class, 'uploadLogo'])->middleware('role:owner,admin');
     Route::post('company/signature', [SettingsController::class, 'uploadSignature'])->middleware('role:owner,admin');
     Route::post('company/stamp',     [SettingsController::class, 'uploadStamp'])->middleware('role:owner,admin');

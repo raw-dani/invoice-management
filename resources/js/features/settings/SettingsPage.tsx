@@ -25,6 +25,9 @@ import {
     PaperAirplaneIcon,
     ServerIcon,
     CogIcon,
+    CheckCircleIcon,
+    ExclamationCircleIcon,
+    KeyIcon,
 } from '../../components/ui/Icons';
 
 const GROUPS: Array<{ key: SettingsGroup; label: string; icon: React.ReactNode }> = [
@@ -33,6 +36,7 @@ const GROUPS: Array<{ key: SettingsGroup; label: string; icon: React.ReactNode }
     { key: 'quote', label: 'Quote', icon: <DocumentDuplicateIcon className="w-4 h-4" /> },
     { key: 'email', label: 'Email', icon: <EnvelopeIcon className="w-4 h-4" /> },
     { key: 'payment', label: 'Payment & Gateway', icon: <CreditCardIcon className="w-4 h-4" /> },
+    { key: 'saml', label: 'SAML SSO', icon: <ShieldCheckIcon className="w-4 h-4" /> },
 ];
 
 export default function SettingsPage() {
@@ -157,6 +161,8 @@ export default function SettingsPage() {
                                         uploadLogoMutation={uploadLogo}
                                         isDemo={isDemo}
                                     />
+                                ) : group === 'saml' ? (
+                                    <SamlSettingsFields values={values} update={update} isDemo={isDemo} />
                                 ) : (
                                     <GroupFields group={group} values={values} update={update} isDemo={isDemo} />
                                 )}
@@ -1736,6 +1742,441 @@ function TestEmail({ isDemo }: { isDemo?: boolean }) {
                     Pengiriman email uji coba dinonaktifkan pada peran Demo.
                 </p>
             )}
+        </div>
+    );
+}
+
+function SamlSettingsFields({
+    values,
+    update,
+    isDemo,
+}: {
+    values: Record<string, any>;
+    update: (key: string, value: any) => void;
+    isDemo?: boolean;
+}) {
+    const [copiedField, setCopiedField] = useState<string | null>(null);
+    const [activeGuide, setActiveGuide] = useState<'google' | 'azure' | 'okta' | null>(null);
+    const [testing, setTesting] = useState(false);
+    const [testResult, setTestResult] = useState<{
+        valid?: boolean;
+        subject?: string;
+        expires_at?: string;
+        is_expired?: boolean;
+        errors?: string[];
+    } | null>(null);
+
+    const baseUrl = window.location.origin;
+    const spEntityId = values.sp_entity_id || `${baseUrl}/api/saml/metadata`;
+    const acsUrl = `${baseUrl}/api/saml/acs`;
+    const slsUrl = `${baseUrl}/api/saml/sls`;
+
+    const copyToClipboard = (text: string, label: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedField(label);
+        toast.success(`${label} berhasil disalin ke clipboard!`);
+        setTimeout(() => setCopiedField(null), 2000);
+    };
+
+    const handleTestSaml = async () => {
+        if (!values.idp_entity_id || !values.idp_sso_url || !values.idp_x509_cert) {
+            toast.error('Harap lengkapi IdP Entity ID, SSO URL, dan Sertifikat X.509 terlebih dahulu.');
+            return;
+        }
+
+        setTesting(true);
+        setTestResult(null);
+        try {
+            const res = await settingsApi.testSaml({
+                idp_entity_id: values.idp_entity_id,
+                idp_sso_url: values.idp_sso_url,
+                idp_x509_cert: values.idp_x509_cert,
+            });
+            setTestResult(res.data);
+            if (res.success) {
+                toast.success('Konfigurasi IdP & Sertifikat X.509 valid!');
+            } else {
+                toast.error('Ditemukan kesalahan pada konfigurasi IdP.');
+            }
+        } catch (err: any) {
+            const msg = err.response?.data?.message || 'Gagal memvalidasi konfigurasi SAML.';
+            toast.error(msg);
+            setTestResult({ valid: false, errors: [msg] });
+        } finally {
+            setTesting(false);
+        }
+    };
+
+    return (
+        <div className="space-y-6">
+            {/* Header Overview Banner */}
+            <div className="bg-gradient-to-r from-slate-900 via-indigo-950 to-indigo-900 rounded-xl p-5 text-white shadow-sm space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center text-indigo-300 shadow-inner">
+                            <ShieldCheckIcon className="w-6 h-6" />
+                        </div>
+                        <div>
+                            <h4 className="font-bold text-base text-white">SAML 2.0 Single Sign-On (SSO) Enterprise</h4>
+                            <p className="text-xs text-indigo-200 mt-0.5">
+                                Sambungkan login karyawan dengan Identity Provider (IdP) perusahaan.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100">
+                            Google Workspace
+                        </span>
+                        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100">
+                            Microsoft Entra (Azure AD)
+                        </span>
+                        <span className="text-[11px] font-semibold px-2.5 py-1 rounded-full bg-white/10 border border-white/20 text-indigo-100">
+                            Okta
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            {/* Service Provider (SP) Parameters Card */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 shadow-2xs">
+                <div className="flex items-center justify-between border-b border-gray-200 pb-3">
+                    <div>
+                        <h4 className="text-sm font-bold text-gray-900">Parameter Service Provider (Aplikasi Ini)</h4>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                            Salin nilai di bawah ini dan tempelkan pada formulir konfigurasi SAML di dashboard IdP Anda.
+                        </p>
+                    </div>
+                    <a
+                        href="/api/saml/metadata?download=1"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg border border-indigo-200 text-indigo-700 bg-indigo-50 hover:bg-indigo-100 transition"
+                    >
+                        <span>Unduh Metadata XML</span>
+                        <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
+                    </a>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3">
+                    {/* SP Entity ID */}
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-gray-700 block">SP Entity ID / Audience URI:</span>
+                            <code className="text-xs font-mono text-indigo-600 block truncate mt-0.5">{spEntityId}</code>
+                        </div>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => copyToClipboard(spEntityId, 'SP Entity ID')}
+                            className="whitespace-nowrap shrink-0"
+                        >
+                            {copiedField === 'SP Entity ID' ? 'Tersalin ✓' : 'Salin'}
+                        </Button>
+                    </div>
+
+                    {/* ACS URL */}
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-gray-700 block">Assertion Consumer Service (ACS) URL / Reply URL:</span>
+                            <code className="text-xs font-mono text-indigo-600 block truncate mt-0.5">{acsUrl}</code>
+                        </div>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => copyToClipboard(acsUrl, 'ACS URL')}
+                            className="whitespace-nowrap shrink-0"
+                        >
+                            {copiedField === 'ACS URL' ? 'Tersalin ✓' : 'Salin'}
+                        </Button>
+                    </div>
+
+                    {/* Single Logout URL */}
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-gray-700 block">Single Logout Service (SLS) URL:</span>
+                            <code className="text-xs font-mono text-indigo-600 block truncate mt-0.5">{slsUrl}</code>
+                        </div>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => copyToClipboard(slsUrl, 'SLS URL')}
+                            className="whitespace-nowrap shrink-0"
+                        >
+                            {copiedField === 'SLS URL' ? 'Tersalin ✓' : 'Salin'}
+                        </Button>
+                    </div>
+
+                    {/* NameID Format */}
+                    <div className="bg-gray-50 rounded-lg p-3 border border-gray-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                        <div className="min-w-0 flex-1">
+                            <span className="text-xs font-semibold text-gray-700 block">NameID Format:</span>
+                            <code className="text-xs font-mono text-indigo-600 block truncate mt-0.5">
+                                urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress
+                            </code>
+                        </div>
+                        <Button
+                            type="button"
+                            size="sm"
+                            variant="secondary"
+                            onClick={() => copyToClipboard('urn:oasis:names:tc:SAML:1.1:nameid-format:emailAddress', 'NameID Format')}
+                            className="whitespace-nowrap shrink-0"
+                        >
+                            {copiedField === 'NameID Format' ? 'Tersalin ✓' : 'Salin'}
+                        </Button>
+                    </div>
+                </div>
+
+                {/* IdP Setup Guide Tabs */}
+                <div className="pt-2">
+                    <span className="text-xs font-bold text-gray-500 uppercase tracking-wider block mb-2">
+                        Panduan Langkah Demi Langkah:
+                    </span>
+                    <div className="flex items-center gap-2 flex-wrap">
+                        <button
+                            type="button"
+                            onClick={() => setActiveGuide(activeGuide === 'google' ? null : 'google')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                activeGuide === 'google'
+                                    ? 'bg-blue-600 text-white border-blue-600'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                        >
+                            🔵 Panduan Google Workspace
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveGuide(activeGuide === 'azure' ? null : 'azure')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                activeGuide === 'azure'
+                                    ? 'bg-sky-600 text-white border-sky-600'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                        >
+                            🔷 Panduan Microsoft Entra (Azure AD)
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => setActiveGuide(activeGuide === 'okta' ? null : 'okta')}
+                            className={`px-3 py-1.5 rounded-lg text-xs font-semibold border transition ${
+                                activeGuide === 'okta'
+                                    ? 'bg-emerald-600 text-white border-emerald-600'
+                                    : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                            }`}
+                        >
+                            🟢 Panduan Okta
+                        </button>
+                    </div>
+
+                    {activeGuide === 'google' && (
+                        <div className="mt-3 p-4 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-950 space-y-2">
+                            <h5 className="font-bold text-sm text-blue-900">Cara Pengaturan di Google Admin Console:</h5>
+                            <ol className="list-decimal pl-4 space-y-1">
+                                <li>Masuk ke <strong>Google Admin Console</strong> (admin.google.com) &gt; <em>Apps</em> &gt; <em>Web and mobile apps</em>.</li>
+                                <li>Pilih <em>Add app</em> &gt; <em>Add custom SAML app</em>. Beri nama aplikasi (misal: "Invoice App SSO").</li>
+                                <li>Di langkah 2 ("Google Identity Provider details"), salin <strong>SSO URL</strong>, <strong>Entity ID</strong>, dan unduh <strong>Certificate (X.509)</strong>.</li>
+                                <li>Di langkah 3 ("Service provider details"), masukkan <strong>ACS URL</strong> dan <strong>Entity ID</strong> dari kotak parameter di atas. Set Name ID format ke <strong>EMAIL</strong>.</li>
+                                <li>Di langkah 4 ("Attribute mapping"), petakan <em>Primary email</em> ke atribut <code>email</code> dan <em>First name</em> ke <code>name</code>.</li>
+                                <li>Selesai dan aktifkan User Access untuk unit organisasi Anda ke <strong>ON for everyone</strong>.</li>
+                            </ol>
+                        </div>
+                    )}
+
+                    {activeGuide === 'azure' && (
+                        <div className="mt-3 p-4 bg-sky-50 border border-sky-200 rounded-lg text-xs text-sky-950 space-y-2">
+                            <h5 className="font-bold text-sm text-sky-900">Cara Pengaturan di Microsoft Entra ID (Azure AD):</h5>
+                            <ol className="list-decimal pl-4 space-y-1">
+                                <li>Masuk ke <strong>Azure Portal / Entra Admin Center</strong> &gt; <em>Enterprise applications</em> &gt; <em>New application</em> &gt; <em>Create your own application</em>.</li>
+                                <li>Pilih opsi "Integrate any other application you don't find in the gallery (Non-gallery)".</li>
+                                <li>Buka menu <em>Single sign-on</em> &gt; pilih metode <strong>SAML</strong>.</li>
+                                <li>Pada kotak <em>Basic SAML Configuration</em>, masukkan <strong>Identifier (Entity ID)</strong> dan <strong>Reply URL (Assertion Consumer Service URL)</strong>.</li>
+                                <li>Pada kotak <em>SAML Certificates</em>, salin isi <strong>Certificate (Base64)</strong>.</li>
+                                <li>Pada kotak <em>Set up [Nama App]</em>, salin <strong>Login URL</strong> dan <strong>Microsoft Entra Identifier</strong> ke formulir di bawah.</li>
+                            </ol>
+                        </div>
+                    )}
+
+                    {activeGuide === 'okta' && (
+                        <div className="mt-3 p-4 bg-emerald-50 border border-emerald-200 rounded-lg text-xs text-emerald-950 space-y-2">
+                            <h5 className="font-bold text-sm text-emerald-900">Cara Pengaturan di Okta:</h5>
+                            <ol className="list-decimal pl-4 space-y-1">
+                                <li>Masuk ke <strong>Okta Admin Console</strong> &gt; <em>Applications</em> &gt; <em>Create App Integration</em>.</li>
+                                <li>Pilih Sign-in method <strong>SAML 2.0</strong> lalu klik Next.</li>
+                                <li>Masukkan <strong>Single sign-on URL</strong> (ACS URL) dan <strong>Audience URI (SP Entity ID)</strong>.</li>
+                                <li>Set <em>Name ID format</em> ke <code>EmailAddress</code> dan <em>Application username</em> ke <code>Email</code>.</li>
+                                <li>Pada tab <em>Sign On</em>, klik <em>View SAML setup instructions</em> untuk mendapatkan <strong>Identity Provider Single Sign-On URL</strong>, <strong>Identity Provider Issuer</strong>, dan <strong>X.509 Certificate</strong>.</li>
+                            </ol>
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* IdP Configuration Form */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 shadow-2xs">
+                <div className="border-b border-gray-200 pb-3">
+                    <h4 className="text-sm font-bold text-gray-900">Konfigurasi Identity Provider (IdP)</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        Isi detail kredensial yang diperoleh dari Google Workspace, Azure AD, atau Okta.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Status SAML SSO">
+                        <Select
+                            disabled={isDemo}
+                            value={values.saml_enabled ?? '0'}
+                            onChange={(e) => update('saml_enabled', e.target.value)}
+                        >
+                            <option value="0">Nonaktif (Disabled)</option>
+                            <option value="1">Aktif (Enabled)</option>
+                        </Select>
+                    </Field>
+
+                    <Field label="Custom SP Entity ID (Opsional)" hint="Kosongkan jika menggunakan default SP metadata URL">
+                        <Input
+                            disabled={isDemo}
+                            value={values.sp_entity_id ?? ''}
+                            onChange={(e) => update('sp_entity_id', e.target.value)}
+                            placeholder={spEntityId}
+                        />
+                    </Field>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="IdP Entity ID (Issuer / Entity ID)" required hint="Contoh: https://accounts.google.com/o/saml2?idpid=... atau sts.windows.net">
+                        <Input
+                            disabled={isDemo}
+                            value={values.idp_entity_id ?? ''}
+                            onChange={(e) => update('idp_entity_id', e.target.value)}
+                            placeholder="https://accounts.google.com/o/saml2?idpid=..."
+                        />
+                    </Field>
+
+                    <Field label="IdP Single Sign-On (SSO) URL" required hint="URL endpoint tujuan pengalihan login pengguna">
+                        <Input
+                            disabled={isDemo}
+                            value={values.idp_sso_url ?? ''}
+                            onChange={(e) => update('idp_sso_url', e.target.value)}
+                            placeholder="https://accounts.google.com/o/saml2/idp?idpid=..."
+                        />
+                    </Field>
+                </div>
+
+                <Field label="IdP Single Logout (SLO) URL (Opsional)" hint="URL endpoint logout terpusat pada IdP">
+                    <Input
+                        disabled={isDemo}
+                        value={values.idp_slo_url ?? ''}
+                        onChange={(e) => update('idp_slo_url', e.target.value)}
+                        placeholder="https://accounts.google.com/o/saml2/idp/logout..."
+                    />
+                </Field>
+
+                <Field
+                    label="IdP X.509 Certificate"
+                    required
+                    hint="Kunci publik sertifikat digital dari IdP untuk memvalidasi cryptographic assertion SAML. Format PEM atau raw Base64."
+                >
+                    <Textarea
+                        disabled={isDemo}
+                        rows={6}
+                        className="font-mono text-xs"
+                        value={values.idp_x509_cert ?? ''}
+                        onChange={(e) => update('idp_x509_cert', e.target.value)}
+                        placeholder="-----BEGIN CERTIFICATE-----&#10;MIIDdDCCAlygAwIBAgIGAX123456...&#10;-----END CERTIFICATE-----"
+                    />
+                </Field>
+
+                {/* Test Connection Button & Result */}
+                <div className="pt-2 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-gray-100">
+                    <Button
+                        type="button"
+                        variant="secondary"
+                        size="sm"
+                        disabled={isDemo || testing}
+                        loading={testing}
+                        onClick={handleTestSaml}
+                        className="flex items-center gap-1.5"
+                    >
+                        <ShieldCheckIcon className="w-4 h-4 text-indigo-600" />
+                        <span>Uji Validitas Sertifikat & Konfigurasi</span>
+                    </Button>
+
+                    {testResult && (
+                        <div className="flex items-center gap-2">
+                            {testResult.valid ? (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-green-700 bg-green-50 px-2.5 py-1 rounded-md border border-green-200">
+                                    <CheckCircleIcon className="w-4 h-4 text-green-600" />
+                                    <span>Sertifikat Valid: {testResult.subject || 'OK'}</span>
+                                    {testResult.expires_at && <span className="text-[10px] text-gray-500">(Exp: {testResult.expires_at})</span>}
+                                </span>
+                            ) : (
+                                <span className="inline-flex items-center gap-1 text-xs font-semibold text-red-700 bg-red-50 px-2.5 py-1 rounded-md border border-red-200">
+                                    <ExclamationCircleIcon className="w-4 h-4 text-red-600" />
+                                    <span>{testResult.errors?.[0] || 'Konfigurasi tidak valid'}</span>
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </div>
+            </div>
+
+            {/* Provisioning & Attribute Mapping Card */}
+            <div className="bg-white rounded-xl border border-gray-200 p-5 space-y-4 shadow-2xs">
+                <div className="border-b border-gray-200 pb-3">
+                    <h4 className="text-sm font-bold text-gray-900">Otomasi Akun (JIT Provisioning) & Pemetaan Atribut</h4>
+                    <p className="text-xs text-gray-500 mt-0.5">
+                        Konfigurasi pembuatan akun otomatis saat pengguna pertama kali berhasil login melalui SAML SSO.
+                    </p>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Just-In-Time (JIT) Provisioning" hint="Otomatis daftarkan user baru jika belum ada di database">
+                        <Select
+                            disabled={isDemo}
+                            value={values.auto_provision_users ?? '1'}
+                            onChange={(e) => update('auto_provision_users', e.target.value)}
+                        >
+                            <option value="1">Aktif (Auto-create user baru)</option>
+                            <option value="0">Nonaktif (Hanya user terdaftar yang boleh login)</option>
+                        </Select>
+                    </Field>
+
+                    <Field label="Peran Default (Default Role)" hint="Peran yang diberikan kepada akun baru yang dibuat otomatis">
+                        <Select
+                            disabled={isDemo}
+                            value={values.default_role ?? 'staff'}
+                            onChange={(e) => update('default_role', e.target.value)}
+                        >
+                            <option value="staff">Staff Operasional</option>
+                            <option value="viewer">Viewer (Read Only)</option>
+                            <option value="admin">Administrator</option>
+                        </Select>
+                    </Field>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Field label="Kunci Atribut Email (SAML Claim)" hint="Nama atribut klaim email dari IdP (Default: email)">
+                        <Input
+                            disabled={isDemo}
+                            value={values.attribute_mapping_email ?? ''}
+                            onChange={(e) => update('attribute_mapping_email', e.target.value)}
+                            placeholder="email"
+                        />
+                    </Field>
+
+                    <Field label="Kunci Atribut Nama (SAML Claim)" hint="Nama atribut klaim nama lengkap dari IdP (Default: name)">
+                        <Input
+                            disabled={isDemo}
+                            value={values.attribute_mapping_name ?? ''}
+                            onChange={(e) => update('attribute_mapping_name', e.target.value)}
+                            placeholder="name"
+                        />
+                    </Field>
+                </div>
+            </div>
         </div>
     );
 }
