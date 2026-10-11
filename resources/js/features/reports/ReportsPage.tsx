@@ -9,16 +9,37 @@ import { formatMoney, formatDate, statusBadgeClass } from '../../lib/utils';
 import { downloadPdf } from '../../lib/pdf';
 import toast from '../../lib/toast';
 import { WhatsAppShareModal, WhatsAppShareData } from '../../components/WhatsAppShareModal';
+import {
+    BanknotesIcon,
+    DocumentTextIcon,
+    ClockIcon,
+    UsersIcon,
+    ArrowPathIcon,
+    ChartBarIcon,
+    TrophyIcon,
+    CalendarIcon,
+    StarIcon,
+    CheckCircleIcon,
+    ExclamationCircleIcon,
+    ExclamationTriangleIcon,
+    TrendingUpIcon,
+    BuildingOfficeIcon,
+    PauseCircleIcon,
+    BriefcaseIcon,
+    WhatsAppIcon,
+    ChevronDownIcon,
+    ChevronRightIcon,
+} from '../../components/ui/Icons';
 
 type Tab = 'revenue' | 'invoices' | 'ar_aging' | 'customers' | 'subscriptions';
 type DatePreset = 'this_month' | 'last_30' | 'this_quarter' | 'this_year' | 'all' | 'custom';
 
-const TABS: { key: Tab; label: string; icon: string }[] = [
-    { key: 'revenue', label: 'Pendapatan', icon: '💰' },
-    { key: 'invoices', label: 'Tagihan (Invoices)', icon: '📄' },
-    { key: 'ar_aging', label: 'Umur Piutang (AR Aging)', icon: '⏳' },
-    { key: 'customers', label: 'Pelanggan', icon: '👥' },
-    { key: 'subscriptions', label: 'Langganan', icon: '🔄' },
+const TABS: { key: Tab; label: string; icon: React.ReactNode }[] = [
+    { key: 'revenue', label: 'Pendapatan', icon: <BanknotesIcon className="w-4 h-4" /> },
+    { key: 'invoices', label: 'Tagihan (Invoices)', icon: <DocumentTextIcon className="w-4 h-4" /> },
+    { key: 'ar_aging', label: 'Umur Piutang (AR Aging)', icon: <ClockIcon className="w-4 h-4" /> },
+    { key: 'customers', label: 'Pelanggan', icon: <UsersIcon className="w-4 h-4" /> },
+    { key: 'subscriptions', label: 'Langganan', icon: <ArrowPathIcon className="w-4 h-4" /> },
 ];
 
 const formatDateStr = (d: Date) => {
@@ -323,28 +344,28 @@ function RevenueReport({ data, groupBy }: { data: any; groupBy: string }) {
                     value={formatMoney(totalRevenue, currency)}
                     badge="Total Kas Masuk"
                     badgeColor="bg-emerald-50 text-emerald-700 border-emerald-200"
-                    icon="💵"
+                    icon={<BanknotesIcon className="w-5 h-5 text-emerald-600" />}
                 />
                 <MetricCard
                     title="Rata-rata Pendapatan"
                     value={formatMoney(avgRevenue, currency)}
                     badge={`Rerata per ${groupBy === 'month' ? 'Bulan' : groupBy === 'customer' ? 'Klien' : 'Produk'}`}
                     badgeColor="bg-blue-50 text-blue-700 border-blue-200"
-                    icon="📊"
+                    icon={<ChartBarIcon className="w-5 h-5 text-blue-600" />}
                 />
                 <MetricCard
                     title="Periode/Penyumbang Tertinggi"
                     value={formatMoney(peakRow.revenue, currency)}
                     badge={peakRow.label}
                     badgeColor="bg-purple-50 text-purple-700 border-purple-200"
-                    icon="🏆"
+                    icon={<TrophyIcon className="w-5 h-5 text-purple-600" />}
                 />
                 <MetricCard
                     title="Jumlah Entri Analisis"
                     value={`${numericRows.length} ${groupBy === 'month' ? 'Bulan' : 'Item'}`}
                     badge="Data Terhitung"
                     badgeColor="bg-gray-100 text-gray-700 border-gray-200"
-                    icon="📅"
+                    icon={<CalendarIcon className="w-5 h-5 text-gray-500" />}
                 />
             </div>
 
@@ -438,8 +459,8 @@ function RevenueReport({ data, groupBy }: { data: any; groupBy: string }) {
                                                     }}
                                                 >
                                                     {isPeak && (
-                                                        <span className="absolute -top-3 left-1/2 -translate-x-1/2 text-xs">
-                                                            ⭐
+                                                        <span className="absolute -top-4 left-1/2 -translate-x-1/2 text-amber-500 flex items-center justify-center">
+                                                            <StarIcon className="w-3.5 h-3.5 fill-amber-400 text-amber-500" />
                                                         </span>
                                                     )}
                                                 </div>
@@ -626,21 +647,21 @@ function InvoiceReport({ data }: { data: any }) {
                     value={formatMoney(totalAmount)}
                     badge={`${totalInvoices} Dokumen`}
                     badgeColor="bg-indigo-50 text-indigo-700 border-indigo-200"
-                    icon="📑"
+                    icon={<DocumentTextIcon className="w-5 h-5 text-indigo-600" />}
                 />
                 <MetricCard
                     title="Pembayaran Berhasil Dihimpun"
                     value={formatMoney(totalCollected)}
                     badge="Lunas Terkumpul"
                     badgeColor="bg-emerald-50 text-emerald-700 border-emerald-200"
-                    icon="✅"
+                    icon={<CheckCircleIcon className="w-5 h-5 text-emerald-600" />}
                 />
                 <MetricCard
                     title="Sisa Piutang Berjalan"
                     value={formatMoney(totalBalance)}
                     badge="Belum Terbayar"
                     badgeColor="bg-red-50 text-red-700 border-red-200"
-                    icon="⏳"
+                    icon={<ClockIcon className="w-5 h-5 text-red-600" />}
                 />
                 <MetricCard
                     title="Tingkat Penagihan (Collection Rate)"
@@ -651,7 +672,7 @@ function InvoiceReport({ data }: { data: any }) {
                             ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                             : 'bg-amber-50 text-amber-700 border-amber-200'
                     }
-                    icon="📈"
+                    icon={<TrendingUpIcon className="w-5 h-5 text-blue-600" />}
                 />
             </div>
 
@@ -818,21 +839,21 @@ function CustomerReport({ data }: { data: any }) {
                     value={`${totalCustomers} Pelanggan`}
                     badge="Pertumbuhan Klien"
                     badgeColor="bg-indigo-50 text-indigo-700 border-indigo-200"
-                    icon="👥"
+                    icon={<UsersIcon className="w-5 h-5 text-indigo-600" />}
                 />
                 <MetricCard
                     title="Total Saldo Piutang (Top Debitur)"
                     value={formatMoney(totalReceivables)}
                     badge="Harus Ditagih"
                     badgeColor="bg-red-50 text-red-700 border-red-200"
-                    icon="⚠️"
+                    icon={<ExclamationTriangleIcon className="w-5 h-5 text-red-600" />}
                 />
                 <MetricCard
                     title="Debitur Piutang Terbesar"
                     value={balanceRows[0]?.customer ?? '-'}
                     badge={balanceRows[0] ? formatMoney(balanceRows[0].balance) : '-'}
                     badgeColor="bg-amber-50 text-amber-700 border-amber-200"
-                    icon="🏢"
+                    icon={<BuildingOfficeIcon className="w-5 h-5 text-amber-600" />}
                 />
             </div>
 
@@ -965,28 +986,28 @@ function SubscriptionReport({ data }: { data: any }) {
                     value={formatMoney(mrr)}
                     badge="Pendapatan Bulanan Tetap"
                     badgeColor="bg-purple-50 text-purple-700 border-purple-200"
-                    icon="🔁"
+                    icon={<ArrowPathIcon className="w-5 h-5 text-purple-600" />}
                 />
                 <MetricCard
                     title="ARR Est. (Annual Run Rate)"
                     value={formatMoney(arr)}
                     badge="Proyeksi 12 Bulan"
                     badgeColor="bg-indigo-50 text-indigo-700 border-indigo-200"
-                    icon="📊"
+                    icon={<ChartBarIcon className="w-5 h-5 text-indigo-600" />}
                 />
                 <MetricCard
                     title="Langganan Aktif"
                     value={`${active} Kontrak`}
                     badge={`${activeRate.toFixed(0)}% dari total`}
                     badgeColor="bg-emerald-50 text-emerald-700 border-emerald-200"
-                    icon="✅"
+                    icon={<CheckCircleIcon className="w-5 h-5 text-emerald-600" />}
                 />
                 <MetricCard
                     title="Ditangguhkan / Berhenti"
                     value={`${paused + cancelled} Kontrak`}
                     badge={`${paused} Paused · ${cancelled} Cancelled`}
                     badgeColor="bg-gray-100 text-gray-700 border-gray-200"
-                    icon="⏸️"
+                    icon={<PauseCircleIcon className="w-5 h-5 text-gray-500" />}
                 />
             </div>
 
@@ -1116,14 +1137,14 @@ function MetricCard({
     value: string | number;
     badge?: string;
     badgeColor?: string;
-    icon?: string;
+    icon?: React.ReactNode;
 }) {
     return (
         <Card className="hover:shadow-sm transition">
             <CardBody className="p-4 space-y-2">
                 <div className="flex items-center justify-between text-xs text-gray-500 font-medium">
                     <span>{title}</span>
-                    {icon && <span className="text-base">{icon}</span>}
+                    {icon && <span className="flex-shrink-0">{icon}</span>}
                 </div>
                 <div className="text-xl font-bold text-gray-900 tracking-tight font-mono">{value}</div>
                 {badge && (
@@ -1199,7 +1220,10 @@ function ArAgingReport({ data }: { data: any }) {
             <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-indigo-50/70 border border-indigo-100 rounded-xl gap-2">
                 <div>
                     <h3 className="text-sm font-bold text-indigo-950 flex items-center gap-2">
-                        <span>⏳ Laporan Umur Piutang Usaha (Accounts Receivable Aging)</span>
+                        <span className="flex items-center gap-1.5">
+                            <ClockIcon className="w-4 h-4 text-indigo-700" />
+                            <span>Laporan Umur Piutang Usaha (Accounts Receivable Aging)</span>
+                        </span>
                         <span className="px-2 py-0.5 rounded text-[11px] font-semibold bg-indigo-200 text-indigo-900">
                             Realtime
                         </span>
@@ -1220,42 +1244,42 @@ function ArAgingReport({ data }: { data: any }) {
                     value={formatMoney(summary.total_receivables, 'IDR')}
                     badge={`${summary.invoice_count} Invoice (${summary.customer_count} Klien)`}
                     badgeColor="bg-indigo-50 text-indigo-700 border-indigo-200"
-                    icon="💼"
+                    icon={<BriefcaseIcon className="w-5 h-5 text-indigo-600" />}
                 />
                 <MetricCard
                     title="Lancar / Current"
                     value={formatMoney(summary.current, 'IDR')}
                     badge={`Belum Jatuh Tempo (${pctCurrent}%)`}
                     badgeColor="bg-emerald-50 text-emerald-700 border-emerald-200"
-                    icon="🟢"
+                    icon={<CheckCircleIcon className="w-5 h-5 text-emerald-600" />}
                 />
                 <MetricCard
                     title="1 - 30 Hari"
                     value={formatMoney(summary.days_1_30, 'IDR')}
                     badge={`Overdue Ringan (${pct1_30}%)`}
                     badgeColor="bg-amber-50 text-amber-700 border-amber-200"
-                    icon="🟡"
+                    icon={<ClockIcon className="w-5 h-5 text-amber-500" />}
                 />
                 <MetricCard
                     title="31 - 60 Hari"
                     value={formatMoney(summary.days_31_60, 'IDR')}
                     badge={`Butuh Follow Up (${pct31_60}%)`}
                     badgeColor="bg-orange-50 text-orange-700 border-orange-200"
-                    icon="🟠"
+                    icon={<ExclamationCircleIcon className="w-5 h-5 text-orange-500" />}
                 />
                 <MetricCard
                     title="61 - 90 Hari"
                     value={formatMoney(summary.days_61_90, 'IDR')}
                     badge={`Risiko Tinggi (${pct61_90}%)`}
                     badgeColor="bg-rose-50 text-rose-700 border-rose-200"
-                    icon="🔴"
+                    icon={<ExclamationTriangleIcon className="w-5 h-5 text-rose-500" />}
                 />
                 <MetricCard
                     title="> 90 Hari (Macet)"
                     value={formatMoney(summary.days_over_90, 'IDR')}
                     badge={`Kritis (${pctOver90}%)`}
                     badgeColor="bg-red-100 text-red-900 border-red-300"
-                    icon="⚠️"
+                    icon={<ExclamationTriangleIcon className="w-5 h-5 text-red-600" />}
                 />
             </div>
 
@@ -1348,7 +1372,13 @@ function ArAgingReport({ data }: { data: any }) {
                                                 >
                                                     <td className="py-3 px-4">
                                                         <div className="font-semibold text-gray-900 flex items-center gap-1.5">
-                                                            <span className="text-gray-400 text-[10px]">{isExpanded ? '▼' : '▶'}</span>
+                                                            <span className="text-gray-400">
+                                                                {isExpanded ? (
+                                                                    <ChevronDownIcon className="w-3.5 h-3.5" />
+                                                                ) : (
+                                                                    <ChevronRightIcon className="w-3.5 h-3.5" />
+                                                                )}
+                                                            </span>
                                                             <span>{c.customer_name}</span>
                                                         </div>
                                                         <div className="text-[11px] text-gray-500 pl-4 mt-0.5">
@@ -1376,11 +1406,12 @@ function ArAgingReport({ data }: { data: any }) {
                                                     <td className="py-3 px-4 text-center" onClick={(e) => e.stopPropagation()}>
                                                         <Button
                                                             size="sm"
-                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-2.5 py-1"
+                                                            className="bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs px-2.5 py-1 inline-flex items-center gap-1.5"
                                                             onClick={() => openWhatsAppForCustomer(c)}
                                                             title="Kirim pengingat WhatsApp ke pelanggan ini"
                                                         >
-                                                            💬 WhatsApp
+                                                            <WhatsAppIcon className="w-3.5 h-3.5" />
+                                                            <span>WhatsApp</span>
                                                         </Button>
                                                     </td>
                                                 </tr>
@@ -1443,9 +1474,10 @@ function ArAgingReport({ data }: { data: any }) {
                                                                                     <button
                                                                                         type="button"
                                                                                         onClick={() => openWhatsAppForInvoice(c, inv)}
-                                                                                        className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 hover:underline"
+                                                                                        className="text-[11px] font-medium text-emerald-700 hover:text-emerald-900 hover:underline inline-flex items-center gap-1"
                                                                                     >
-                                                                                        💬 Kirim WA Tagihan
+                                                                                        <WhatsAppIcon className="w-3.5 h-3.5" />
+                                                                                        <span>Kirim WA Tagihan</span>
                                                                                     </button>
                                                                                 </td>
                                                                             </tr>

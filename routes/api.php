@@ -32,10 +32,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/health', fn () => response()->json(['status' => 'ok']));
 
-// Public Client Portal
-Route::prefix('public')->group(function () {
+// Public Client Portal (Rate limited to protect against brute force and scraping)
+Route::prefix('public')->middleware('throttle:60,1')->group(function () {
     Route::get('invoices/{token}', [PublicPortalController::class, 'showInvoice']);
-    Route::post('invoices/{token}/proof', [PublicPortalController::class, 'uploadInvoiceProof']);
+    Route::post('invoices/{token}/proof', [PublicPortalController::class, 'uploadInvoiceProof'])->middleware('throttle:15,1');
     Route::get('invoices/{token}/pdf', [PublicPortalController::class, 'downloadInvoicePdf']);
     Route::get('quotes/{token}', [PublicPortalController::class, 'showQuote']);
     Route::post('quotes/{token}/accept', [PublicPortalController::class, 'acceptQuote']);
@@ -44,7 +44,8 @@ Route::prefix('public')->group(function () {
 });
 
 // Payment Gateway Webhooks (Midtrans, Xendit, Doku, Duitku)
-Route::post('webhooks/payment/{gateway}', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'handle']);
+Route::post('webhooks/payment/{gateway}', [\App\Http\Controllers\Api\PaymentWebhookController::class, 'handle'])
+    ->middleware('throttle:120,1');
 
 // Public auth
 Route::post('/auth/register', [AuthController::class, 'register'])->middleware('throttle:auth');

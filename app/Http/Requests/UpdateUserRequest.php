@@ -20,6 +20,7 @@ class UpdateUserRequest extends FormRequest
             'name' => 'required|string|max:255',
             'email' => ['required', 'email', 'max:255', 'unique:users,email,' . $userId],
             'role' => 'required|in:admin,staff,viewer,demo',
+            'password' => 'nullable|string|min:8|confirmed',
         ];
     }
 }

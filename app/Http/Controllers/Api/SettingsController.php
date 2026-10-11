@@ -151,7 +151,7 @@ class SettingsController extends Controller
     public function uploadLogo(Request $request): JsonResponse
     {
         $request->validate([
-            'logo' => ['required', 'image', 'max:2048'],
+            'logo' => ['required', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
         $company = Company::findOrFail(auth()->user()->company_id);
@@ -172,7 +172,7 @@ class SettingsController extends Controller
     public function uploadSignature(Request $request): JsonResponse
     {
         $request->validate([
-            'signature' => ['required', 'image', 'max:2048'],
+            'signature' => ['required', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
         $company = Company::findOrFail(auth()->user()->company_id);
@@ -193,7 +193,7 @@ class SettingsController extends Controller
     public function uploadStamp(Request $request): JsonResponse
     {
         $request->validate([
-            'stamp' => ['required', 'image', 'max:2048'],
+            'stamp' => ['required', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
         $company = Company::findOrFail(auth()->user()->company_id);
@@ -214,7 +214,7 @@ class SettingsController extends Controller
     public function uploadQris(Request $request): JsonResponse
     {
         $request->validate([
-            'qris' => ['required', 'image', 'max:2048'],
+            'qris' => ['required', 'file', 'mimes:png,jpg,jpeg,webp', 'max:2048'],
         ]);
 
         $company = Company::findOrFail(auth()->user()->company_id);

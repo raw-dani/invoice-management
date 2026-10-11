@@ -37,6 +37,12 @@ class UserController extends Controller
         $this->authorize('manage', $user);
 
         $data = $request->validated();
+        if (!empty($data['password'])) {
+            $data['password'] = Hash::make($data['password']);
+        } else {
+            unset($data['password']);
+        }
+
         $user->update($data);
 
         ActivityLog::record('user.updated', "User {$user->name} updated", $user);

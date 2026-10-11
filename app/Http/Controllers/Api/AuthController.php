@@ -15,6 +15,12 @@ class AuthController extends Controller
 {
     public function register(Request $request): JsonResponse
     {
+        if (!config('auth.allow_public_registration', false)) {
+            return response()->json([
+                'message' => 'Pendaftaran akun publik dinonaktifkan. Pengguna baru hanya dapat dibuat oleh Owner atau Administrator perusahaan.',
+            ], 403);
+        }
+
         $data = $request->validate([
             'name'      => 'required|string|max:255',
             'email'     => 'required|email|max:255|unique:users,email',

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { useAuth } from '../../contexts/AuthContext';
 import { Input, Field } from '../../components/ui/Form';
@@ -71,12 +71,11 @@ export default function LoginPage() {
                         </Button>
                     </form>
 
-                    <p className="mt-6 text-center text-sm text-gray-500">
-                        Don't have an account?{' '}
-                        <Link to="/register" className="text-indigo-600 hover:text-indigo-700 font-medium">
-                            Register
-                        </Link>
-                    </p>
+                    <div className="mt-6 pt-5 border-t border-gray-100 text-center">
+                        <p className="text-xs text-gray-500">
+                            Pendaftaran pengguna baru dikelola oleh <strong>Owner</strong> atau <strong>Admin</strong>. Hubungi administrator perusahaan Anda jika membutuhkan akun baru.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

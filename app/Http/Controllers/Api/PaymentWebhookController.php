@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\ActivityLog;
 use App\Models\Invoice;
 use App\Models\Payment;
+use App\Models\Setting;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,18 @@ class PaymentWebhookController extends Controller
             return response()->json(['message' => 'Invoice not found.'], 404);
         }
 
+        // Security: Cryptographic signature verification if configured or provided
+        $serverKey = Setting::where('company_id', $invoice->company_id)->where('key', 'midtrans_server_key')->value('value');
+        $signatureKey = (string) $request->input('signature_key');
+        if ($serverKey && $signatureKey) {
+            $statusCode = (string) ($request->input('status_code') ?: ($transactionStatus === 'settlement' ? '200' : '201'));
+            $expectedSignature = hash('sha512', $orderId . $statusCode . $grossAmount . $serverKey);
+            if (!hash_equals($expectedSignature, $signatureKey)) {
+                Log::warning("Midtrans webhook signature mismatch for invoice {$invoice->invoice_number}");
+                return response()->json(['message' => 'Invalid signature.'], 403);
+            }
+        }
+
         $isSuccess = ($transactionStatus === 'capture' && $fraudStatus === 'accept') || $transactionStatus === 'settlement';
 
         if ($isSuccess && !in_array($invoice->status, ['paid', 'void', 'cancelled'], true)) {
@@ -75,6 +88,17 @@ class PaymentWebhookController extends Controller
         $invoice = Invoice::where('invoice_number', $externalId)->first();
         if (!$invoice) {
             return response()->json(['message' => 'Invoice not found.'], 404);
+        }
+
+        // Security: Verify Xendit Callback Token if configured or provided
+        $webhookToken = Setting::where('company_id', $invoice->company_id)->where('key', 'xendit_webhook_token')->value('value')
+            ?: Setting::where('company_id', $invoice->company_id)->where('key', 'xendit_secret_key')->value('value');
+        $incomingToken = (string) ($request->header('x-callback-token') ?: $request->input('callback_token'));
+        if ($webhookToken && $incomingToken) {
+            if (!hash_equals($webhookToken, $incomingToken)) {
+                Log::warning("Xendit callback token mismatch for invoice {$invoice->invoice_number}");
+                return response()->json(['message' => 'Invalid callback token.'], 403);
+            }
         }
 
         if (in_array($status, ['PAID', 'SETTLED', 'COMPLETED'], true) && !in_array($invoice->status, ['paid', 'void', 'cancelled'], true)) {
@@ -123,6 +147,18 @@ class PaymentWebhookController extends Controller
         $invoice = Invoice::where('invoice_number', $merchantOrderId)->first();
         if (!$invoice) {
             return response()->json(['message' => 'Invoice not found.'], 404);
+        }
+
+        // Security: Verify Duitku MD5 Signature if configured or provided
+        $apiKey = Setting::where('company_id', $invoice->company_id)->where('key', 'duitku_api_key')->value('value');
+        $merchantCode = (string) (Setting::where('company_id', $invoice->company_id)->where('key', 'duitku_merchant_code')->value('value') ?: $request->input('merchantCode'));
+        $incomingSignature = (string) $request->input('signature');
+        if ($apiKey && $merchantCode && $incomingSignature) {
+            $expected = md5($merchantCode . $amount . $merchantOrderId . $apiKey);
+            if (!hash_equals($expected, $incomingSignature)) {
+                Log::warning("Duitku webhook signature mismatch for invoice {$invoice->invoice_number}");
+                return response()->json(['message' => 'Invalid signature.'], 403);
+            }
         }
 
         if ($resultCode === '00' && !in_array($invoice->status, ['paid', 'void', 'cancelled'], true)) {

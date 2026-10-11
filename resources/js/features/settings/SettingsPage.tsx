@@ -7,13 +7,32 @@ import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from '../../lib/toast';
+import {
+    BuildingOfficeIcon,
+    DocumentTextIcon,
+    DocumentDuplicateIcon,
+    EnvelopeIcon,
+    CreditCardIcon,
+    SparklesIcon,
+    LockClosedIcon,
+    BuildingLibraryIcon,
+    BoltIcon,
+    ShieldCheckIcon,
+    WalletIcon,
+    LightBulbIcon,
+    ArrowTopRightOnSquareIcon,
+    BeakerIcon,
+    PaperAirplaneIcon,
+    ServerIcon,
+    CogIcon,
+} from '../../components/ui/Icons';
 
-const GROUPS: Array<{ key: SettingsGroup; label: string }> = [
-    { key: 'company', label: 'Company' },
-    { key: 'invoice', label: 'Invoice' },
-    { key: 'quote', label: 'Quote' },
-    { key: 'email', label: 'Email' },
-    { key: 'payment', label: 'Payment & Gateway' },
+const GROUPS: Array<{ key: SettingsGroup; label: string; icon: React.ReactNode }> = [
+    { key: 'company', label: 'Company', icon: <BuildingOfficeIcon className="w-4 h-4" /> },
+    { key: 'invoice', label: 'Invoice', icon: <DocumentTextIcon className="w-4 h-4" /> },
+    { key: 'quote', label: 'Quote', icon: <DocumentDuplicateIcon className="w-4 h-4" /> },
+    { key: 'email', label: 'Email', icon: <EnvelopeIcon className="w-4 h-4" /> },
+    { key: 'payment', label: 'Payment & Gateway', icon: <CreditCardIcon className="w-4 h-4" /> },
 ];
 
 export default function SettingsPage() {
@@ -23,9 +42,9 @@ export default function SettingsPage() {
     const [group, setGroup] = useState<SettingsGroup>('company');
     const queryClient = useQueryClient();
 
-    const availableGroups: Array<{ key: SettingsGroup; label: string }> = [
+    const availableGroups: Array<{ key: SettingsGroup; label: string; icon: React.ReactNode }> = [
         ...GROUPS,
-        ...(isAdmin || isDemo ? [{ key: 'demo_data' as const, label: 'Demo Data' }] : []),
+        ...(isAdmin || isDemo ? [{ key: 'demo_data' as const, label: 'Demo Data', icon: <SparklesIcon className="w-4 h-4" /> }] : []),
     ];
 
     const query = useQuery({
@@ -81,7 +100,9 @@ export default function SettingsPage() {
             <PageHeader title="Settings" subtitle="Configure company, billing, email, payment preferences, and demo data." />
             {isDemo && (
                 <div className="flex items-center gap-3 p-4 mb-6 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs">
-                    <span className="text-2xl">🔒</span>
+                    <div className="w-10 h-10 rounded-lg bg-amber-100 flex items-center justify-center text-amber-700 flex-shrink-0">
+                        <LockClosedIcon className="w-5 h-5" />
+                    </div>
                     <div>
                         <h4 className="font-semibold text-sm">Mode Demo Aktif — Pengaturan View Only</h4>
                         <p className="text-xs text-amber-800 mt-0.5">
@@ -97,13 +118,16 @@ export default function SettingsPage() {
                             <button
                                 key={item.key}
                                 onClick={() => setGroup(item.key)}
-                                className={`w-full text-left px-3 py-2 rounded text-sm transition-colors ${
+                                className={`w-full text-left px-3 py-2 rounded text-sm transition-colors flex items-center gap-2.5 ${
                                     group === item.key
                                         ? 'bg-indigo-50 text-indigo-700 font-medium'
                                         : 'hover:bg-gray-50 text-gray-700'
                                 }`}
                             >
-                                {item.label}
+                                <span className={group === item.key ? 'text-indigo-600' : 'text-gray-400'}>
+                                    {item.icon}
+                                </span>
+                                <span>{item.label}</span>
                             </button>
                         ))}
                     </CardBody>
@@ -219,7 +243,7 @@ function DemoDataSettings({ isDemo }: { isDemo?: boolean }) {
                     Semua data demo ditandai secara khusus sehingga dapat dihapus kapan saja tanpa mempengaruhi data riil operasional Anda.
                 </p>
                 <div className="flex items-center gap-2 text-xs text-amber-800 bg-amber-50 border border-amber-200 rounded p-3 mt-3">
-                    <span className="text-base">🔒</span>
+                    <LockClosedIcon className="w-4 h-4 text-amber-700 flex-shrink-0" />
                     <span>
                         <strong>Akses Khusus Admin:</strong> Hanya pengguna dengan peran <em>Owner</em> atau <em>Admin</em> yang diizinkan untuk mengelola dan menghapus data demo.
                     </span>
@@ -731,11 +755,11 @@ function PaymentSettingsFields({
     };
 
     const gateways = [
-        { id: 'manual', name: 'Transfer Bank Manual', icon: '🏦', enabled: true },
-        { id: 'midtrans', name: 'Midtrans Snap', icon: '💳', enabled: values.midtrans_enabled === '1' },
-        { id: 'xendit', name: 'Xendit Invoice', icon: '⚡', enabled: values.xendit_enabled === '1' },
-        { id: 'doku', name: 'DOKU Checkout', icon: '🔴', enabled: values.doku_enabled === '1' },
-        { id: 'duitku', name: 'Duitku Gateway', icon: '🟢', enabled: values.duitku_enabled === '1' },
+        { id: 'manual', name: 'Transfer Bank Manual', icon: <BuildingLibraryIcon className="w-4 h-4" />, enabled: true },
+        { id: 'midtrans', name: 'Midtrans Snap', icon: <CreditCardIcon className="w-4 h-4" />, enabled: values.midtrans_enabled === '1' },
+        { id: 'xendit', name: 'Xendit Invoice', icon: <BoltIcon className="w-4 h-4" />, enabled: values.xendit_enabled === '1' },
+        { id: 'doku', name: 'DOKU Checkout', icon: <ShieldCheckIcon className="w-4 h-4" />, enabled: values.doku_enabled === '1' },
+        { id: 'duitku', name: 'Duitku Gateway', icon: <WalletIcon className="w-4 h-4" />, enabled: values.duitku_enabled === '1' },
     ];
 
     return (
@@ -758,11 +782,11 @@ function PaymentSettingsFields({
                             value={values.active_gateway ?? 'manual'}
                             onChange={(e) => update('active_gateway', e.target.value)}
                         >
-                            <option value="manual">🏦 Transfer Bank Manual (Default)</option>
-                            <option value="midtrans">💳 Midtrans (Snap / QRIS / VA / E-Wallet)</option>
-                            <option value="xendit">⚡ Xendit (Invoice & Payment Link)</option>
-                            <option value="doku">🔴 DOKU Checkout</option>
-                            <option value="duitku">🟢 Duitku Payment Gateway</option>
+                            <option value="manual">Transfer Bank Manual (Default)</option>
+                            <option value="midtrans">Midtrans (Snap / QRIS / VA / E-Wallet)</option>
+                            <option value="xendit">Xendit (Invoice & Payment Link)</option>
+                            <option value="doku">DOKU Checkout</option>
+                            <option value="duitku">Duitku Payment Gateway</option>
                         </Select>
                     </Field>
                     <div className="flex flex-col justify-end">
@@ -771,13 +795,14 @@ function PaymentSettingsFields({
                             {gateways.map((g) => (
                                 <span
                                     key={g.id}
-                                    className={`text-[11px] px-2 py-0.5 rounded-full font-medium ${
+                                    className={`inline-flex items-center gap-1.5 text-[11px] px-2 py-0.5 rounded-full font-medium ${
                                         g.enabled
                                             ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                                             : 'bg-gray-100 text-gray-500 border border-gray-200'
                                     }`}
                                 >
-                                    {g.icon} {g.name.split(' ')[0]}: {g.enabled ? 'Aktif' : 'Off'}
+                                    <span className="w-3.5 h-3.5 flex items-center justify-center">{g.icon}</span>
+                                    <span>{g.name.split(' ')[0]}: {g.enabled ? 'Aktif' : 'Off'}</span>
                                 </span>
                             ))}
                         </div>
@@ -857,21 +882,22 @@ function PaymentSettingsFields({
                 <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-200 pb-2">
                         <div className="flex items-center gap-2">
-                            <span className="text-base">💳</span>
+                            <CreditCardIcon className="w-5 h-5 text-indigo-600" />
                             <span className="text-sm font-semibold text-gray-900">Konfigurasi Midtrans (Snap / QRIS / VA)</span>
                         </div>
                         <a
                             href="https://dashboard.midtrans.com"
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-indigo-600 hover:underline"
+                            className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
                         >
-                            Buka Dashboard Midtrans ↗
+                            <span>Buka Dashboard Midtrans</span>
+                            <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
                         </a>
                     </div>
 
                     <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
-                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <LightBulbIcon className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                         <div>
                             <span className="font-semibold text-blue-950">Panduan Integrasi Midtrans: </span>
                             Dapatkan <strong>Client Key</strong> dan <strong>Server Key</strong> dari dashboard Midtrans menu <em>Settings &gt; Access Keys</em>.
@@ -975,21 +1001,22 @@ function PaymentSettingsFields({
                 <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-200 pb-2">
                         <div className="flex items-center gap-2">
-                            <span className="text-base">⚡</span>
+                            <BoltIcon className="w-5 h-5 text-amber-500" />
                             <span className="text-sm font-semibold text-gray-900">Konfigurasi Xendit (Invoice & Payment Link)</span>
                         </div>
                         <a
                             href="https://dashboard.xendit.co"
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-indigo-600 hover:underline"
+                            className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
                         >
-                            Buka Dashboard Xendit ↗
+                            <span>Buka Dashboard Xendit</span>
+                            <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
                         </a>
                     </div>
 
                     <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
-                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <LightBulbIcon className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                         <div>
                             <span className="font-semibold text-blue-950">Panduan Integrasi Xendit: </span>
                             Dapatkan <strong>Secret API Key</strong> di dashboard Xendit menu <em>Settings &gt; API Keys &gt; Generate Secret Key</em>.
@@ -1093,21 +1120,22 @@ function PaymentSettingsFields({
                 <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-200 pb-2">
                         <div className="flex items-center gap-2">
-                            <span className="text-base">🔴</span>
+                            <ShieldCheckIcon className="w-5 h-5 text-red-600" />
                             <span className="text-sm font-semibold text-gray-900">Konfigurasi DOKU Checkout</span>
                         </div>
                         <a
                             href="https://dashboard.doku.com"
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-indigo-600 hover:underline"
+                            className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
                         >
-                            Buka Back Office DOKU ↗
+                            <span>Buka Back Office DOKU</span>
+                            <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
                         </a>
                     </div>
 
                     <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
-                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <LightBulbIcon className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                         <div>
                             <span className="font-semibold text-blue-950">Panduan Integrasi DOKU: </span>
                             Dapatkan <strong>Client ID (Mall ID)</strong> dan <strong>Secret Key (Shared Key)</strong> dari portal DOKU Back Office menu <em>Integration &gt; API Credentials</em>.
@@ -1202,21 +1230,22 @@ function PaymentSettingsFields({
                 <div className="bg-gray-50/70 rounded-lg border border-gray-200 p-4 space-y-4">
                     <div className="flex items-center justify-between border-b border-gray-200 pb-2">
                         <div className="flex items-center gap-2">
-                            <span className="text-base">🟢</span>
+                            <WalletIcon className="w-5 h-5 text-emerald-600" />
                             <span className="text-sm font-semibold text-gray-900">Konfigurasi Duitku Payment Gateway</span>
                         </div>
                         <a
                             href="https://passport.duitku.com"
                             target="_blank"
                             rel="noreferrer"
-                            className="text-xs text-indigo-600 hover:underline"
+                            className="text-xs text-indigo-600 hover:underline inline-flex items-center gap-1"
                         >
-                            Buka Dashboard Duitku ↗
+                            <span>Buka Dashboard Duitku</span>
+                            <ArrowTopRightOnSquareIcon className="w-3.5 h-3.5" />
                         </a>
                     </div>
 
                     <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
-                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <LightBulbIcon className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                         <div>
                             <span className="font-semibold text-blue-950">Panduan Integrasi Duitku: </span>
                             Dapatkan <strong>Merchant Code</strong> dan <strong>API Key</strong> dari dashboard Duitku menu <em>Project Settings</em>.
@@ -1312,7 +1341,7 @@ function PaymentSettingsFields({
 interface SmtpPreset {
     id: string;
     name: string;
-    icon: string;
+    icon: React.ReactNode;
     host: string;
     port: string;
     encryption: string;
@@ -1325,7 +1354,7 @@ const SMTP_PRESETS: SmtpPreset[] = [
     {
         id: 'gmail',
         name: 'Gmail / Google Workspace',
-        icon: '🔴',
+        icon: <EnvelopeIcon className="w-4 h-4 text-rose-500" />,
         host: 'smtp.gmail.com',
         port: '587',
         encryption: 'tls',
@@ -1335,7 +1364,7 @@ const SMTP_PRESETS: SmtpPreset[] = [
     {
         id: 'mailtrap',
         name: 'Mailtrap (Sandbox & Testing)',
-        icon: '🧪',
+        icon: <BeakerIcon className="w-4 h-4 text-emerald-500" />,
         host: 'sandbox.smtp.mailtrap.io',
         port: '2525',
         encryption: 'tls',
@@ -1345,7 +1374,7 @@ const SMTP_PRESETS: SmtpPreset[] = [
     {
         id: 'brevo',
         name: 'Brevo (dahulu Sendinblue)',
-        icon: '📨',
+        icon: <PaperAirplaneIcon className="w-4 h-4 text-blue-500" />,
         host: 'smtp-relay.brevo.com',
         port: '587',
         encryption: 'tls',
@@ -1355,7 +1384,7 @@ const SMTP_PRESETS: SmtpPreset[] = [
     {
         id: 'sendgrid',
         name: 'SendGrid (Twilio)',
-        icon: '⚡',
+        icon: <BoltIcon className="w-4 h-4 text-sky-500" />,
         host: 'smtp.sendgrid.net',
         port: '587',
         encryption: 'tls',
@@ -1366,7 +1395,7 @@ const SMTP_PRESETS: SmtpPreset[] = [
     {
         id: 'zoho',
         name: 'Zoho Mail',
-        icon: '📮',
+        icon: <ServerIcon className="w-4 h-4 text-amber-500" />,
         host: 'smtp.zoho.com',
         port: '465',
         encryption: 'ssl',
@@ -1376,7 +1405,7 @@ const SMTP_PRESETS: SmtpPreset[] = [
     {
         id: 'custom',
         name: 'Custom SMTP / Lainnya (cPanel / Webmail / VPS)',
-        icon: '⚙️',
+        icon: <CogIcon className="w-4 h-4 text-slate-500" />,
         host: '',
         port: '587',
         encryption: 'tls',
@@ -1479,7 +1508,7 @@ function EmailFields({
                                             : 'border-gray-200 bg-white hover:bg-gray-100 text-gray-700 hover:border-gray-300'
                                     }`}
                                 >
-                                    <span className="text-lg">{p.icon}</span>
+                                    <span className="flex-shrink-0 flex items-center justify-center w-7 h-7 rounded-md bg-gray-50 border border-gray-100">{p.icon}</span>
                                     <div className="min-w-0 flex-1">
                                         <div className="text-xs font-semibold truncate">{p.name.split(' (')[0]}</div>
                                         {p.badge && (
@@ -1497,7 +1526,7 @@ function EmailFields({
                 {/* Preset Guidance Card */}
                 {currentPreset && (
                     <div className="p-3 bg-blue-50/80 border border-blue-200 rounded-lg text-xs text-blue-900 flex items-start gap-2.5">
-                        <span className="text-base leading-none mt-0.5">💡</span>
+                        <LightBulbIcon className="w-4 h-4 text-blue-600 flex-shrink-0 mt-0.5" />
                         <div>
                             <span className="font-semibold text-blue-950">Petunjuk {currentPreset.name}: </span>
                             <span>{currentPreset.hint}</span>
@@ -1674,7 +1703,7 @@ function TestEmail({ isDemo }: { isDemo?: boolean }) {
     return (
         <div className="bg-indigo-50/60 border border-indigo-100 rounded-lg p-4 mt-4">
             <div className="flex items-center gap-2 mb-1.5">
-                <span className="text-lg">📬</span>
+                <PaperAirplaneIcon className="w-5 h-5 text-indigo-600 flex-shrink-0" />
                 <h4 className="text-sm font-semibold text-gray-900">Uji Coba Pengiriman Email (Test Connection)</h4>
             </div>
             <p className="text-xs text-gray-600 mb-3">

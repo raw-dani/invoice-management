@@ -6,6 +6,10 @@ export interface Profile {
     email: string;
     role: string;
     company_id: number;
+    company?: {
+        id: number;
+        name: string;
+    } | null;
     created_at: string;
 }
 

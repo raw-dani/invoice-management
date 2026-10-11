@@ -7,6 +7,7 @@ import toast from '../../lib/toast';
 import { searchApi } from '../../api/search';
 import type { SearchResults } from '../../api/search';
 import { notificationsApi } from '../../api/notifications';
+import { UserCircleIcon, ArrowRightOnRectangleIcon } from '../ui/Icons';
 
 const Icon = ({ className, children }: { className?: string; children: ReactNode }) => (
     <svg className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" aria-hidden="true">
@@ -114,6 +115,7 @@ const NAV_ITEMS = [
     { to: '/settings', label: 'Settings', icon: SettingsIcon },
     { to: '/notifications', label: 'Notifications', icon: NotificationsIcon },
     { to: '/users', label: 'Users', icon: UsersIcon },
+    { to: '/profile', label: 'My Profile', icon: UserCircleIcon },
 ];
 
 export default function AppLayout() {
@@ -157,15 +159,36 @@ export default function AppLayout() {
                     ))}
                 </nav>
                 <div className="px-3 py-3 border-t border-gray-200">
-                    <div className="px-3 py-2 text-sm">
-                        <div className="font-medium text-gray-900 truncate">{user?.name}</div>
-                        <div className="text-xs text-gray-500 truncate">{user?.company?.name}</div>
-                    </div>
+                    <NavLink
+                        to="/profile"
+                        className={({ isActive }) => classNames(
+                            'flex items-center gap-2.5 p-2 rounded-lg text-sm transition group mb-1.5',
+                            isActive
+                                ? 'bg-indigo-50 border border-indigo-200 text-indigo-900 font-medium shadow-xs'
+                                : 'text-gray-700 hover:bg-gray-100'
+                        )}
+                        title="Buka profil akun & ganti password"
+                    >
+                        <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-600 to-indigo-500 text-white flex items-center justify-center font-bold text-xs flex-shrink-0 shadow-xs">
+                            {user?.name?.charAt(0).toUpperCase() || 'U'}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                            <div className="font-semibold text-xs truncate leading-tight text-gray-900 group-hover:text-indigo-600">
+                                {user?.name}
+                            </div>
+                            <div className="text-[11px] text-gray-500 truncate flex items-center gap-1">
+                                <span className="capitalize font-medium text-indigo-600">{user?.role}</span>
+                                <span>•</span>
+                                <span>Profil Saya</span>
+                            </div>
+                        </div>
+                    </NavLink>
                     <button
                         onClick={handleLogout}
-                        className="w-full text-left px-3 py-2 text-sm text-red-600 hover:bg-red-50 rounded-md"
+                        className="w-full flex items-center gap-2 px-2.5 py-1.5 text-xs text-red-600 hover:bg-red-50 hover:text-red-700 rounded-md transition font-medium"
                     >
-                        Logout
+                        <ArrowRightOnRectangleIcon className="w-4 h-4 text-red-500" />
+                        <span>Logout</span>
                     </button>
                 </div>
             </aside>

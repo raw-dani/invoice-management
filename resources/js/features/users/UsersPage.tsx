@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button';
 import { ConfirmDialog } from '../../components/ui/Modal';
 import { useAuth } from '../../contexts/AuthContext';
 import toast from '../../lib/toast';
+import { LockClosedIcon } from '../../components/ui/Icons';
 
 const ROLE_LABELS: Record<string, { label: string; badge: string; desc: string }> = {
     owner: {
@@ -131,6 +132,16 @@ export default function UsersPage() {
             toast.error('Konfirmasi password tidak cocok.');
             return;
         }
+        if (editing && form.password) {
+            if (form.password.length < 8) {
+                toast.error('Password baru minimal 8 karakter.');
+                return;
+            }
+            if (form.password !== form.password_confirmation) {
+                toast.error('Konfirmasi password baru tidak cocok.');
+                return;
+            }
+        }
         save.mutate();
     };
 
@@ -152,7 +163,7 @@ export default function UsersPage() {
             {/* Demo Mode Notice Banner */}
             {isDemo && (
                 <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 shadow-xs">
-                    <span className="text-2xl">🔒</span>
+                    <LockClosedIcon className="w-5 h-5 text-amber-600 flex-shrink-0" />
                     <div>
                         <h4 className="font-semibold text-sm">Mode Demo Aktif — Akses View Only</h4>
                         <p className="text-xs text-amber-800 mt-0.5">
@@ -224,7 +235,31 @@ export default function UsersPage() {
                                     </Select>
                                 </Field>
 
-                                {!editing && (
+                                {editing ? (
+                                    <div className="pt-2 border-t border-gray-100 space-y-3">
+                                        <div className="text-xs text-gray-500 font-medium">
+                                            Reset Password Pengguna (Opsional — kosongkan jika tidak ingin mengubah):
+                                        </div>
+                                        <Field label="Password Baru">
+                                            <Input
+                                                placeholder="Minimal 8 karakter baru..."
+                                                type="password"
+                                                value={form.password}
+                                                onChange={(e) => setForm({ ...form, password: e.target.value })}
+                                            />
+                                        </Field>
+                                        {Boolean(form.password) && (
+                                            <Field label="Konfirmasi Password Baru" required>
+                                                <Input
+                                                    placeholder="Ulangi password baru..."
+                                                    type="password"
+                                                    value={form.password_confirmation}
+                                                    onChange={(e) => setForm({ ...form, password_confirmation: e.target.value })}
+                                                />
+                                            </Field>
+                                        )}
+                                    </div>
+                                ) : (
                                     <>
                                         <Field label="Password" required>
                                             <Input

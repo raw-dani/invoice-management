@@ -34,7 +34,7 @@ class PdfService
             ->setPaper('a4', 'portrait')
             ->setOptions([
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
+                'isRemoteEnabled'      => false,
                 'defaultFont'          => 'sans-serif',
             ])
             ->output();
@@ -56,7 +56,7 @@ class PdfService
             ->setPaper('a4', 'portrait')
             ->setOptions([
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
+                'isRemoteEnabled'      => false,
                 'defaultFont'          => 'sans-serif',
             ])
             ->output();
@@ -79,7 +79,7 @@ class PdfService
             ->setPaper('a4', 'portrait')
             ->setOptions([
                 'isHtml5ParserEnabled' => true,
-                'isRemoteEnabled'      => true,
+                'isRemoteEnabled'      => false,
                 'defaultFont'          => 'sans-serif',
             ])
             ->output();
