@@ -167,6 +167,36 @@ class EnvironmentValidator
     }
 
     /**
+     * Normalisasi nilai masa berlaku lisensi.
+     * Mengembalikan null jika lisensi tidak memiliki tanggal kedaluwarsa (unlimited / seumur hidup).
+     */
+    public function normalizeExpiresAt(?string $expiresAt): ?string
+    {
+        if (empty($expiresAt)) {
+            return null;
+        }
+
+        $trimmed = trim($expiresAt);
+        if (
+            $trimmed === '' ||
+            strtolower($trimmed) === 'null' ||
+            str_starts_with($trimmed, '0000-00-00') ||
+            strtolower($trimmed) === 'lifetime' ||
+            strtolower($trimmed) === 'unlimited' ||
+            strtolower($trimmed) === 'seumur hidup'
+        ) {
+            return null;
+        }
+
+        $ts = strtotime($trimmed);
+        if ($ts === false || $ts <= 0) {
+            return null;
+        }
+
+        return $trimmed;
+    }
+
+    /**
      * Verifikasi lisensi ke server pusat.
      */
     public function verifyWithServer(string $licenseKey): array
@@ -188,10 +218,19 @@ class EnvironmentValidator
         $res = $this->request('POST', '/api/v1/verify', $payload);
 
         if (($res['status'] ?? '') === 'success') {
-            // Sinkronkan masa berlaku lisensi yang sebenarnya (bukan sekadar token JWT expiry)
+            $tokenExpiresAt = $res['data']['expires_at'] ?? null;
+            $res['data']['token_expires_at'] = $tokenExpiresAt;
+
+            // Sinkronkan masa berlaku lisensi yang sebenarnya dari License Manager
             $detail = $this->getLicenseInfo($licenseKey);
-            if (!empty($detail['expires_at'])) {
-                $res['data']['expires_at'] = $detail['expires_at'];
+            if ($detail !== null) {
+                // Jika di server pusat expires_at null/kosong, berarti lisensi unlimited (seumur hidup)
+                $res['data']['expires_at'] = $this->normalizeExpiresAt($detail['expires_at'] ?? null);
+            } elseif (isset($res['data']['license']) && is_array($res['data']['license'])) {
+                $res['data']['expires_at'] = $this->normalizeExpiresAt($res['data']['license']['expires_at'] ?? null);
+            } else {
+                // JANGAN gunakan token JWT expiry 24 jam ($tokenExpiresAt) sebagai masa berlaku lisensi
+                $res['data']['expires_at'] = null;
             }
         }
 
@@ -220,14 +259,24 @@ class EnvironmentValidator
         $res = $this->request('POST', '/api/v1/activate', $payload);
 
         if (($res['status'] ?? '') === 'success') {
+            $tokenExpiresAt = $res['data']['expires_at'] ?? null;
+
             // Ambil masa berlaku lisensi yang sebenarnya dari License Manager
             $detail = $this->getLicenseInfo($licenseKey);
-            $realExpiresAt = $detail['expires_at'] ?? ($res['data']['license']['expires_at'] ?? ($res['data']['expires_at'] ?? null));
+            if ($detail !== null) {
+                // Jika di server pusat tidak diset tanggal (null/kosong), lisensi bersifat unlimited (seumur hidup)
+                $realExpiresAt = $this->normalizeExpiresAt($detail['expires_at'] ?? null);
+            } elseif (isset($res['data']['license']) && is_array($res['data']['license'])) {
+                $realExpiresAt = $this->normalizeExpiresAt($res['data']['license']['expires_at'] ?? null);
+            } else {
+                // JANGAN gunakan token JWT expiry 24 jam ($tokenExpiresAt) sebagai masa berlaku lisensi
+                $realExpiresAt = null;
+            }
 
             $saveData = [
                 'license_key' => trim($licenseKey),
                 'token' => $res['data']['token'] ?? null,
-                'token_expires_at' => $res['data']['expires_at'] ?? null,
+                'token_expires_at' => $tokenExpiresAt,
                 'expires_at' => $realExpiresAt,
                 'install_id' => $this->getInstallId(),
                 'domain' => $this->getDomain(),
@@ -235,9 +284,8 @@ class EnvironmentValidator
             ];
             $this->writeStorageData($saveData);
 
-            if ($realExpiresAt) {
-                $res['data']['expires_at'] = $realExpiresAt;
-            }
+            $res['data']['token_expires_at'] = $tokenExpiresAt;
+            $res['data']['expires_at'] = $realExpiresAt;
         }
 
         return $res;
@@ -303,7 +351,8 @@ class EnvironmentValidator
 
             if (($verifyResult['status'] ?? '') === 'success') {
                 $data['token'] = $verifyResult['data']['token'] ?? ($data['token'] ?? null);
-                $data['expires_at'] = $verifyResult['data']['expires_at'] ?? null;
+                $data['token_expires_at'] = $verifyResult['data']['token_expires_at'] ?? ($data['token_expires_at'] ?? null);
+                $data['expires_at'] = $this->normalizeExpiresAt($verifyResult['data']['expires_at'] ?? null);
                 $data['last_checked'] = $now;
                 $data['install_id'] = $currentInstallId;
                 $this->writeStorageData($data);

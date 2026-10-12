@@ -61,25 +61,32 @@ class LicenseService
         $apiKey = Setting::getValue($companyId, 'license_api_key') ?: env('LICENSE_API_KEY', '');
 
         $licenseKey = $localData['license_key'] ?? $dbLicenseKey;
-        $expiresAt = $localData['expires_at'] ?? Setting::getValue($companyId, 'license_expires_at');
+        $expiresAt = $guard->normalizeExpiresAt($localData['expires_at'] ?? Setting::getValue($companyId, 'license_expires_at'));
         $lastChecked = isset($localData['last_checked']) ? date('c', $localData['last_checked']) : null;
         $registeredInstallId = $localData['install_id'] ?? null;
         $registeredDomain = $localData['domain'] ?? null;
 
-        // Auto-sinkronisasi masa berlaku lisensi asli dari License Manager jika masih berisi token expiry 24 jam
+        // Auto-sinkronisasi masa berlaku lisensi asli dari License Manager jika masih berisi token expiry 24 jam atau jika status terlanjur expired
         if (!empty($licenseKey)) {
-            $isShortTokenExpiry = false;
-            if (!empty($expiresAt) && !empty($localData['last_checked'])) {
-                $diff = strtotime($expiresAt) - (int)$localData['last_checked'];
-                if ($diff > 0 && $diff <= 86400 * 2) {
-                    $isShortTokenExpiry = true;
+            $needsResync = false;
+            if (!empty($expiresAt)) {
+                // 1. Jika terlanjur dianggap expired (misal akibat token 24 jam kemarin), periksa apakah di server sebenarnya unlimited
+                if (strtotime($expiresAt) < time()) {
+                    $needsResync = true;
+                }
+                // 2. Jika selisih waktu expiresAt dengan last_checked <= 48 jam (token JWT pendek 24 jam)
+                elseif (!empty($localData['last_checked'])) {
+                    $diff = strtotime($expiresAt) - (int)$localData['last_checked'];
+                    if ($diff > 0 && $diff <= 86400 * 2) {
+                        $needsResync = true;
+                    }
                 }
             }
 
-            if (empty($expiresAt) || $isShortTokenExpiry) {
+            if ($needsResync) {
                 $detail = $guard->getLicenseInfo($licenseKey);
-                if (!empty($detail['expires_at'])) {
-                    $expiresAt = $detail['expires_at'];
+                if ($detail !== null) {
+                    $expiresAt = $guard->normalizeExpiresAt($detail['expires_at'] ?? null);
                     $localData['expires_at'] = $expiresAt;
                     $guard->writeStorageData($localData);
                     Setting::setValue($companyId, 'license_expires_at', $expiresAt);
@@ -153,9 +160,8 @@ class LicenseService
 
         if (($result['status'] ?? '') === 'success') {
             Setting::setValue($companyId, 'license_key', $licenseKey);
-            if (!empty($result['data']['expires_at'])) {
-                Setting::setValue($companyId, 'license_expires_at', $result['data']['expires_at']);
-            }
+            $expiresAt = $guard->normalizeExpiresAt($result['data']['expires_at'] ?? null);
+            Setting::setValue($companyId, 'license_expires_at', $expiresAt);
             Setting::setValue($companyId, 'license_status', 'active');
             Setting::setValue($companyId, 'license_install_id', $guard->getInstallId());
             Setting::setValue($companyId, 'license_registered_domain', $guard->getDomain());
@@ -183,16 +189,16 @@ class LicenseService
             $data = $guard->readStorageData();
             $data['license_key'] = $licenseKey;
             $data['token'] = $result['data']['token'] ?? ($data['token'] ?? null);
-            $data['expires_at'] = $result['data']['expires_at'] ?? null;
+            $data['token_expires_at'] = $result['data']['token_expires_at'] ?? ($data['token_expires_at'] ?? null);
+            $expiresAt = $guard->normalizeExpiresAt($result['data']['expires_at'] ?? null);
+            $data['expires_at'] = $expiresAt;
             $data['last_checked'] = time();
             $data['install_id'] = $guard->getInstallId();
             $data['domain'] = $guard->getDomain();
             $guard->writeStorageData($data);
 
             Setting::setValue($companyId, 'license_status', 'active');
-            if (!empty($result['data']['expires_at'])) {
-                Setting::setValue($companyId, 'license_expires_at', $result['data']['expires_at']);
-            }
+            Setting::setValue($companyId, 'license_expires_at', $expiresAt);
         }
 
         return $result;

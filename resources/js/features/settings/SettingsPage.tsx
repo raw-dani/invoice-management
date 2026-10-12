@@ -2469,12 +2469,12 @@ function LicenseSettingsFields({
                     <div className="p-4 space-y-1">
                         <span className="text-xs font-medium text-gray-500 block">Masa Berlaku</span>
                         <span className="text-xs font-semibold text-gray-800 block">
-                            {license?.expires_at
+                            {license?.expires_at && !['null', '0000-00-00', 'undefined'].includes(license.expires_at.toLowerCase())
                                 ? (new Date(license.expires_at).getFullYear() >= 2049
                                     ? `Seumur Hidup (${formatDate(license.expires_at)})`
                                     : formatDate(license.expires_at))
                                 : isLicensed
-                                ? 'Seumur Hidup (Lifetime)'
+                                ? 'Seumur Hidup (Lifetime / Unlimited)'
                                 : '-'}
                         </span>
                     </div>

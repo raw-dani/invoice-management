@@ -34,6 +34,16 @@ class LicenseManagementTest extends TestCase
             'company_id' => $this->company->id,
             'role' => 'viewer',
         ]);
+
+        app(\App\Services\LicenseService::class)->getGuard($this->company->id)->deleteStorageData();
+    }
+
+    protected function tearDown(): void
+    {
+        if (isset($this->company)) {
+            app(\App\Services\LicenseService::class)->getGuard($this->company->id)->deleteStorageData();
+        }
+        parent::tearDown();
     }
 
     public function test_license_status_endpoint_returns_valid_structure(): void
@@ -97,6 +107,8 @@ class LicenseManagementTest extends TestCase
     public function test_operational_endpoints_blocked_when_unlicensed(): void
     {
         config(['services.license.enforce_in_tests' => true]);
+        app(\App\Services\LicenseService::class)->getGuard($this->company->id)->deleteStorageData();
+        \App\Models\Setting::setValue($this->company->id, 'license_key', null);
 
         $response = $this->actingAs($this->admin, 'sanctum')
             ->getJson('/api/invoices');
@@ -142,5 +154,34 @@ class LicenseManagementTest extends TestCase
 
         $status->assertStatus(200)
             ->assertJsonPath('data.is_licensed', false);
+    }
+
+    public function test_unlimited_license_with_null_expiration_remains_active(): void
+    {
+        $guard = app(\App\Services\LicenseService::class)->getGuard($this->company->id);
+        $guard->writeStorageData([
+            'license_key' => 'INVOICE-TEST-UNLIMITED-1234',
+            'token' => 'dummy_token',
+            'install_id' => $guard->getInstallId(),
+            'domain' => $guard->getDomain(),
+            'expires_at' => null, // License manager did not set date (unlimited)
+            'last_checked' => time(),
+        ]);
+
+        $status = $this->actingAs($this->admin, 'sanctum')
+            ->getJson('/api/settings/license/status');
+
+        $status->assertStatus(200)
+            ->assertJsonPath('data.is_licensed', true)
+            ->assertJsonPath('data.status', 'active')
+            ->assertJsonPath('data.expires_at', null);
+
+        // Normalize helper test
+        $this->assertNull($guard->normalizeExpiresAt(null));
+        $this->assertNull($guard->normalizeExpiresAt(''));
+        $this->assertNull($guard->normalizeExpiresAt('null'));
+        $this->assertNull($guard->normalizeExpiresAt('0000-00-00 00:00:00'));
+        $this->assertNull($guard->normalizeExpiresAt('lifetime'));
+        $this->assertSame('2030-01-01 00:00:00', $guard->normalizeExpiresAt('2030-01-01 00:00:00'));
     }
 }
