@@ -32,9 +32,18 @@ Aplikasi invoice management berbasis Laravel API dan React TypeScript untuk meng
 - Subscription CRUD, pause/resume/cancel, dan recurring invoice
 - Billing scheduler dan queued invoice email
 
-### Operations
+### Operations & Enterprise
 
 - Dashboard summary, MRR, overdue, recent invoice, dan upcoming billing
+- Laporan Keuangan Interaktif & Smart AR Aging (Analisis Umur Piutang 1-30, 31-60, 61-90, >90 hari) dengan ekspor CSV & PDF
+- Public Client Portal tanpa login untuk review tagihan dan persetujuan penawaran digital
+- Mandiri Upload Bukti Transfer (*Payment Proof*) oleh klien + Verifikasi/Approval Admin
+- Integrasi Payment Gateway Webhook Indonesia (Midtrans, Xendit, DOKU, Duitku) dengan verifikasi tanda tangan otomatis
+- Penawaran Termin & Milestone Proyek bertahap (otomatis terbit faktur per termin)
+- 1-Click WhatsApp Share cerdas ke nomor klien (draft pesan formal bahasa Indonesia)
+- SAML 2.0 Single Sign-On (SSO) Google Workspace, Azure AD, dan Okta
+- Commercial License Protection (Install ID & hardware fingerprint)
+- 1-Click Demo Data Showcase Generator & Cleaner
 - Global search invoice, quote, customer, product, dan subscription
 - Email template editor dan delivery logs
 - PDF template catalog dan default selection
@@ -120,7 +129,11 @@ php artisan migrate
 php artisan db:seed
 ```
 
-Seeder menyediakan currency, tax rate, PDF template, dan email template default. Tidak ada akun demo hardcoded; gunakan halaman register atau API register.
+Seeder otomatis menyediakan mata uang (IDR, USD, dll.), tarif pajak (PPN 11%, 12%), template PDF (*Modern, Professional, Classic, Compact*), template email transaksi, serta akun Owner default:
+- **Email**: `admin@example.com`
+- **Password**: `password`
+
+*(Catatan: Pendaftaran akun publik dinonaktifkan secara default untuk keamanan; dapat diaktifkan melalui `ALLOW_PUBLIC_REGISTRATION=true` di file `.env`).*
 
 ### Jalankan aplikasi
 

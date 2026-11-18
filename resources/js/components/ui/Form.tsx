@@ -12,21 +12,21 @@ interface FieldProps {
 export function Field({ label, error, required, children, hint }: FieldProps) {
     return (
         <div className="space-y-1">
-            <label className="block text-sm font-medium text-gray-700">
+            <label className="block text-sm font-medium text-[#083336]">
                 {label} {required && <span className="text-red-500">*</span>}
             </label>
             {children}
-            {hint && !error && <p className="text-xs text-gray-500">{hint}</p>}
+            {hint && !error && <p className="text-xs text-[#083336]/60">{hint}</p>}
             {error && <p className="text-xs text-red-600">{error}</p>}
         </div>
     );
 }
 
 const inputClass = (hasError?: string) => classNames(
-    'block w-full rounded-md border bg-white px-3 py-2 text-sm shadow-sm',
-    'focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500',
+    'block w-full rounded-md border bg-white px-3 py-2 text-sm shadow-xs text-[#083336]',
+    'focus:outline-none focus:ring-2 focus:ring-[#4DB6AC] focus:border-[#0F5A5E]',
     'disabled:bg-gray-100 disabled:cursor-not-allowed',
-    hasError ? 'border-red-300' : 'border-gray-300'
+    hasError ? 'border-red-300' : 'border-[#0F5A5E]/20'
 );
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {

@@ -1,3 +1,26 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+    body {
+        background-color: #F9F8F3;
+        color: #083336;
+    }
+}
+
+/* Kustomisasi scrollbar halus dengan tema Deep Teal / Emerald Blue */
+::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+}
+::-webkit-scrollbar-track {
+    background: #F9F8F3;
+}
+::-webkit-scrollbar-thumb {
+    background: #B6DCDC;
+    border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+    background: #4DB6AC;
+}

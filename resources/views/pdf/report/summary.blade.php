@@ -13,14 +13,14 @@
         }
         .header {
             margin-bottom: 25px;
-            border-bottom: 2px solid #4f46e5;
+            border-bottom: 2px solid #0F5A5E;
             padding-bottom: 12px;
         }
         .header table { width: 100%; }
         .company-name {
             font-size: 18px;
             font-weight: bold;
-            color: #4f46e5;
+            color: #0F5A5E;
         }
         .report-title {
             text-align: right;
@@ -248,6 +248,67 @@
                 @empty
                     <tr>
                         <td colspan="3" class="text-center" style="color: #9ca3af;">No upcoming billings.</td>
+                    </tr>
+                @endforelse
+            </tbody>
+        </table>
+    @elseif (in_array($type, ['ar_aging', 'ar-aging'], true))
+        <div class="section-title">Aging Piutang (Accounts Receivable Aging) Summary</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Total Piutang</th>
+                    <th>Lancar (Current)</th>
+                    <th>1-30 Hari</th>
+                    <th>31-60 Hari</th>
+                    <th>61-90 Hari</th>
+                    <th>>90 Hari</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td><strong>Rp {{ number_format($arAging['summary']['total_receivables'] ?? 0, 0, ',', '.') }}</strong></td>
+                    <td>Rp {{ number_format($arAging['summary']['current'] ?? 0, 0, ',', '.') }}</td>
+                    <td>Rp {{ number_format($arAging['summary']['days_1_30'] ?? 0, 0, ',', '.') }}</td>
+                    <td>Rp {{ number_format($arAging['summary']['days_31_60'] ?? 0, 0, ',', '.') }}</td>
+                    <td>Rp {{ number_format($arAging['summary']['days_61_90'] ?? 0, 0, ',', '.') }}</td>
+                    <td style="color: #dc2626;"><strong>Rp {{ number_format($arAging['summary']['days_over_90'] ?? 0, 0, ',', '.') }}</strong></td>
+                </tr>
+            </tbody>
+        </table>
+
+        <div class="section-title">Daftar Piutang per Pelanggan</div>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Nama Pelanggan</th>
+                    <th class="text-right">Lancar</th>
+                    <th class="text-right">1-30 H</th>
+                    <th class="text-right">31-60 H</th>
+                    <th class="text-right">61-90 H</th>
+                    <th class="text-right">>90 H</th>
+                    <th class="text-right">Total Saldo</th>
+                </tr>
+            </thead>
+            <tbody>
+                @forelse ($arAging['customers'] ?? [] as $row)
+                    <tr>
+                        <td>
+                            <strong>{{ $row['customer_name'] }}</strong>
+                            @if(!empty($row['phone']))
+                                <br><small style="color: #6b7280;">{{ $row['phone'] }}</small>
+                            @endif
+                        </td>
+                        <td class="text-right">{{ number_format($row['current'], 0, ',', '.') }}</td>
+                        <td class="text-right">{{ number_format($row['days_1_30'], 0, ',', '.') }}</td>
+                        <td class="text-right">{{ number_format($row['days_31_60'], 0, ',', '.') }}</td>
+                        <td class="text-right">{{ number_format($row['days_61_90'], 0, ',', '.') }}</td>
+                        <td class="text-right" style="color: #dc2626;">{{ number_format($row['days_over_90'], 0, ',', '.') }}</td>
+                        <td class="text-right"><strong>{{ number_format($row['total_balance'], 0, ',', '.') }}</strong></td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="7" class="text-center" style="color: #9ca3af;">Tidak ada piutang tertunggak.</td>
                     </tr>
                 @endforelse
             </tbody>

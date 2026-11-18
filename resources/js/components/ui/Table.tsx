@@ -46,8 +46,8 @@ export function DataTable<T>({
 
     return (
         <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+            <table className="min-w-full divide-y divide-[#0F5A5E]/10">
+                <thead className="bg-[#F9F8F3]/80">
                     <tr>
                         {selectable && (
                             <th className="px-4 py-3 w-10">
@@ -73,7 +73,7 @@ export function DataTable<T>({
                         ))}
                     </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white divide-y divide-[#0F5A5E]/10">
                     {data.map((row) => {
                         const key = String(row[keyField]);
                         const canSelect = rowSelectable ? rowSelectable(row) : true;
@@ -81,7 +81,7 @@ export function DataTable<T>({
                             <tr
                                 key={key}
                                 onClick={onRowClick ? () => onRowClick(row) : undefined}
-                                className={classNames(onRowClick && 'hover:bg-gray-50 cursor-pointer')}
+                                className={classNames(onRowClick && 'hover:bg-[#F9F8F3]/70 cursor-pointer')}
                             >
                                 {selectable && (
                                     <td className="px-4 py-3 w-10">

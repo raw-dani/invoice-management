@@ -17,14 +17,14 @@
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
         .company-info { max-width: 55%; }
         .company-logo { max-height: 56px; max-width: 180px; margin-bottom: 8px; }
-        .company-name { font-size: 18px; font-weight: 700; color: #4f46e5; margin: 0 0 6px 0; }
+        .company-name { font-size: 18px; font-weight: 700; color: #0F5A5E; margin: 0 0 6px 0; }
         .company-detail { color: #6b7280; font-size: 10.5px; line-height: 1.55; }
         .doc-title { text-align: right; }
         .doc-title h1 {
             font-size: 26px;
             font-weight: 300;
             letter-spacing: 4px;
-            color: #4f46e5;
+            color: #0F5A5E;
             margin: 0;
             text-transform: uppercase;
         }
@@ -97,7 +97,7 @@
             margin-bottom: 20px;
         }
         table.items thead th {
-            background: #4f46e5;
+            background: #0F5A5E;
             color: #ffffff;
             padding: 11px 10px;
             text-align: left;
@@ -129,19 +129,19 @@
         }
         .totals-row.muted { color: #6b7280; }
         .totals-row.grand {
-            border-top: 2px solid #4f46e5;
+            border-top: 2px solid #0F5A5E;
             margin-top: 6px;
             padding-top: 10px;
             font-size: 15px;
             font-weight: 700;
-            color: #4f46e5;
+            color: #0F5A5E;
         }
         .totals-row.balance { color: #dc2626; font-weight: 700; padding-top: 6px; }
 
         .notes-block {
             background: #f9fafb;
             padding: 12px 14px;
-            border-left: 3px solid #4f46e5;
+            border-left: 3px solid #0F5A5E;
             margin-bottom: 14px;
         }
         .notes-title {
@@ -195,7 +195,7 @@
             <div class="doc-number">#{{ $invoice->invoice_number }}</div>
             <div class="status-badge status-{{ $invoice->status }}">{{ str_replace('_', ' ', ucfirst($invoice->status)) }}</div>
             @if (!empty($invoice->milestone_name))
-                <div style="margin-top: 6px; font-size: 9px; color: #4338ca; font-weight: bold; background: #eef2ff; padding: 2px 8px; border-radius: 4px; display: inline-block; border: 1px solid #c7d2fe;">
+                <div style="margin-top: 6px; font-size: 9px; color: #083336; font-weight: bold; background: #F0F7F7; padding: 2px 8px; border-radius: 4px; display: inline-block; border: 1px solid #B6DCDC;">
                     🎯 {{ $invoice->milestone_name }} @if ($invoice->milestone_sequence && $invoice->milestone_total_termins) ({{ $invoice->milestone_sequence }}/{{ $invoice->milestone_total_termins }}) @endif
                 </div>
             @endif

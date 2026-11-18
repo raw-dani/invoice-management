@@ -277,6 +277,22 @@ class ReportController extends Controller
                         $row['next_billing_date'] ?? '',
                     ]);
                 }
+            } elseif (in_array($type, ['ar_aging', 'ar-aging'], true)) {
+                fputcsv($handle, ['Customer Name', 'Contact', 'Phone', 'Current (IDR)', '1-30 Days (IDR)', '31-60 Days (IDR)', '61-90 Days (IDR)', '>90 Days (IDR)', 'Total Balance (IDR)']);
+                $data = $this->arAging($request)->getData(true)['data']['customers'];
+                foreach ($data as $row) {
+                    fputcsv($handle, [
+                        $row['customer_name'] ?? '',
+                        $row['contact_name'] ?? '',
+                        $row['phone'] ?? '',
+                        $row['current'] ?? 0,
+                        $row['days_1_30'] ?? 0,
+                        $row['days_31_60'] ?? 0,
+                        $row['days_61_90'] ?? 0,
+                        $row['days_over_90'] ?? 0,
+                        $row['total_balance'] ?? 0,
+                    ]);
+                }
             }
 
             fclose($handle);
@@ -313,6 +329,8 @@ class ReportController extends Controller
             $viewData['balances'] = $cData['balances'];
         } elseif ($type === 'subscriptions') {
             $viewData['data'] = $this->subscriptions()->getData(true)['data'];
+        } elseif (in_array($type, ['ar_aging', 'ar-aging'], true)) {
+            $viewData['arAging'] = $this->arAging($request)->getData(true)['data'];
         }
 
         $pdf = \Barryvdh\DomPDF\Facade\Pdf::loadView('pdf.report.summary', $viewData)

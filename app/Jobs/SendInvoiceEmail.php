@@ -32,6 +32,8 @@ class SendInvoiceEmail implements ShouldQueue
             return;
         }
 
+        \App\Models\Setting::configureMailForCompany($invoice->company_id);
+
         $customer = $invoice->customer;
         if (!$customer || !$customer->email) {
             Log::warning('SendInvoiceEmail: customer missing email', ['invoice_id' => $invoice->id]);

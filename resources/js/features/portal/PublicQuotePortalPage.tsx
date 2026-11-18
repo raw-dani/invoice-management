@@ -58,7 +58,7 @@ export default function PublicQuotePortalPage() {
 
     if (isLoading) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-[#F9F8F3] flex items-center justify-center p-4">
                 <div className="text-center space-y-2">
                     <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto"></div>
                     <p className="text-sm text-gray-500">Memuat rincian penawaran...</p>
@@ -69,7 +69,7 @@ export default function PublicQuotePortalPage() {
 
     if (error || !data) {
         return (
-            <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+            <div className="min-h-screen bg-[#F9F8F3] flex items-center justify-center p-4">
                 <div className="max-w-md w-full bg-white p-6 rounded-xl border shadow-sm text-center space-y-3">
                     <div className="w-12 h-12 mx-auto rounded-full bg-gray-100 flex items-center justify-center">
                         <MagnifyingGlassIcon className="w-6 h-6 text-gray-400" />
@@ -87,7 +87,7 @@ export default function PublicQuotePortalPage() {
     const canRespond = ['draft', 'sent', 'viewed'].includes(quote.status);
 
     return (
-        <div className="min-h-screen bg-slate-100 py-8 px-4 sm:px-6 lg:px-8">
+        <div className="min-h-screen bg-[#F9F8F3] py-8 px-4 sm:px-6 lg:px-8">
             <div className="max-w-4xl mx-auto space-y-6">
                 {/* Top Action Header */}
                 <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-4 rounded-xl shadow-xs border">

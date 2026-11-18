@@ -32,6 +32,8 @@ class SendQuoteEmail implements ShouldQueue
             return;
         }
 
+        \App\Models\Setting::configureMailForCompany($quote->company_id);
+
         $customer = $quote->customer;
         if (!$customer || !$customer->email) {
             Log::warning('SendQuoteEmail: customer missing email', ['quote_id' => $quote->id]);

@@ -30,6 +30,8 @@ class SendInvoicePaidEmail implements ShouldQueue
             return;
         }
 
+        \App\Models\Setting::configureMailForCompany($invoice->company_id);
+
         $customer = $invoice->customer;
         if (!$customer || !$customer->email) {
             return;

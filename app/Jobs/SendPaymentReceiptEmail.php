@@ -40,6 +40,8 @@ class SendPaymentReceiptEmail implements ShouldQueue
             return;
         }
 
+        \App\Models\Setting::configureMailForCompany($invoice->company_id);
+
         $to = $this->toEmail ?: $payment->customer?->email ?: $invoice->customer?->email;
         if (!$to) {
             return;

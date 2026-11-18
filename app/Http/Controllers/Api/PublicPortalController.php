@@ -22,18 +22,8 @@ class PublicPortalController extends Controller
     private function resolveInvoice(string $token): Invoice
     {
         $invoice = Invoice::with(['customer', 'items.product', 'company'])
-            ->where(function ($query) use ($token) {
-                $query->where('public_token', $token);
-                if (is_numeric($token)) {
-                    $query->orWhere('id', (int) $token);
-                }
-            })
+            ->where('public_token', $token)
             ->firstOrFail();
-
-        if (empty($invoice->public_token)) {
-            $invoice->public_token = Str::random(32);
-            $invoice->saveQuietly();
-        }
 
         return $invoice;
     }
@@ -41,18 +31,8 @@ class PublicPortalController extends Controller
     private function resolveQuote(string $token): Quote
     {
         $quote = Quote::with(['customer', 'items.product', 'company'])
-            ->where(function ($query) use ($token) {
-                $query->where('public_token', $token);
-                if (is_numeric($token)) {
-                    $query->orWhere('id', (int) $token);
-                }
-            })
+            ->where('public_token', $token)
             ->firstOrFail();
-
-        if (empty($quote->public_token)) {
-            $quote->public_token = Str::random(32);
-            $quote->saveQuietly();
-        }
 
         return $quote;
     }

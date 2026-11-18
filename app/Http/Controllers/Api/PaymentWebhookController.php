@@ -203,7 +203,25 @@ class PaymentWebhookController extends Controller
                 'notes'          => "Pembayaran otomatis via " . ucfirst($gateway) . " ({$paymentType})",
             ]);
 
-            $invoice->applyPayment($payAmount);
+            $transitioned = $invoice->applyPayment($payAmount);
+
+            if ($transitioned) {
+                \App\Events\InvoicePaid::dispatch($invoice->fresh());
+            }
+
+            \App\Jobs\SendPaymentReceiptEmail::dispatch($payment->id);
+
+            app(\App\Services\NotifyUser::class)->company(
+                (string) $invoice->company_id,
+                'payment_received',
+                'Pembayaran Gateway Diterima',
+                "Pembayaran {$payment->payment_number} via " . ucfirst($gateway) . " sebesar " . number_format($payAmount) . " berhasil diverifikasi otomatis.",
+                [
+                    'payment_id' => $payment->id,
+                    'invoice_id' => $invoice->id,
+                    'gateway'    => $gateway,
+                ]
+            );
 
             ActivityLog::record(
                 'payment.gateway_webhook',

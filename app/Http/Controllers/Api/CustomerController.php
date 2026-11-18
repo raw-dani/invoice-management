@@ -131,6 +131,12 @@ class CustomerController extends Controller
     {
         $this->authorize('delete', $customer);
 
+        if ($customer->invoices()->exists() || $customer->quotes()->exists() || $customer->subscriptions()->exists() || $customer->payments()->exists()) {
+            return response()->json([
+                'message' => 'Pelanggan memiliki riwayat transaksi/penawaran aktif dan tidak dapat dihapus demi menjaga integritas data akuntansi. Anda dapat mengubah statusnya menjadi Inactive.',
+            ], 422);
+        }
+
         $customer->delete();
 
         return response()->json(['message' => 'Customer deleted successfully.']);

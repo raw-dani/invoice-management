@@ -18,6 +18,8 @@ return [
         'passwords' => 'users',
     ],
 
+    'allow_public_registration' => env('ALLOW_PUBLIC_REGISTRATION', false),
+
     /*
     |--------------------------------------------------------------------------
     | Authentication Guards

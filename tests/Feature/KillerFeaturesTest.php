@@ -73,14 +73,14 @@ class KillerFeaturesTest extends TestCase
 
         $this->assertNotEmpty($invoice->public_token);
 
-        // 1. Client views invoice without auth (both by token and fallback numeric ID)
+        // 1. Client views invoice without auth (by secure public_token)
         $res = $this->getJson("/api/public/invoices/{$invoice->public_token}");
         $res->assertOk()
             ->assertJsonPath('invoice.invoice_number', 'INV-2026-0001');
 
+        // Security check: raw numeric ID without public token must be rejected (IDOR protection)
         $resById = $this->getJson("/api/public/invoices/{$invoice->id}");
-        $resById->assertOk()
-            ->assertJsonPath('invoice.invoice_number', 'INV-2026-0001');
+        $resById->assertNotFound();
 
         // Verify activity was logged
         $this->assertDatabaseHas('activity_logs', [
@@ -128,14 +128,14 @@ class KillerFeaturesTest extends TestCase
 
         $this->assertNotEmpty($quote->public_token);
 
-        // 1. Client views quote without auth (both by token and fallback numeric ID)
+        // 1. Client views quote without auth (by secure public_token)
         $res = $this->getJson("/api/public/quotes/{$quote->public_token}");
         $res->assertOk()
             ->assertJsonPath('quote.quote_number', 'QUO-2026-0001');
 
+        // Security check: raw numeric ID without public token must be rejected (IDOR protection)
         $resById = $this->getJson("/api/public/quotes/{$quote->id}");
-        $resById->assertOk()
-            ->assertJsonPath('quote.quote_number', 'QUO-2026-0001');
+        $resById->assertNotFound();
 
         $this->assertEquals('viewed', $quote->fresh()->status);
 

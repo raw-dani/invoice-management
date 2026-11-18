@@ -20,7 +20,7 @@
                         @php $qrisUri = $company->qris_data_uri; @endphp
                         @if ($qrisUri)
                             <div style="margin-top: 8px; padding-top: 6px; border-top: 1px dashed #d1d5db;">
-                                <div style="font-size: 9.5px; font-weight: 700; color: #4f46e5; margin-bottom: 3px;">
+                                <div style="font-size: 9.5px; font-weight: 700; color: #0F5A5E; margin-bottom: 3px;">
                                     SCAN QRIS PEMBAYARAN:
                                 </div>
                                 <img src="{{ $qrisUri }}" alt="QRIS" style="max-height: 90px; max-width: 90px; border: 1px solid #e5e7eb; border-radius: 4px; padding: 2px; background: #fff;">

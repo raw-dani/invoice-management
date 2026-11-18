@@ -19,8 +19,9 @@ class EnsureLicenseIsActive
      */
     public function handle(Request $request, Closure $next): Response
     {
-        // Bypass otomatis di environment testing unit testing
-        if (app()->environment('testing') && !config('services.license.enforce_in_tests', false)) {
+        // Bypass otomatis di environment testing atau local development jika lisensi tidak dipaksakan
+        $isLocalDevBypass = app()->environment('local') && !config('services.license.enforce_in_local', env('LICENSE_ENFORCE_IN_LOCAL', false));
+        if ($isLocalDevBypass || (app()->environment('testing') && !config('services.license.enforce_in_tests', false))) {
             return $next($request);
         }
 

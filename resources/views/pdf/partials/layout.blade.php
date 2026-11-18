@@ -16,7 +16,7 @@
         .header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 28px; }
         .company-info { max-width: 55%; }
         .company-logo { max-height: 56px; max-width: 180px; margin-bottom: 8px; }
-        .company-name { font-size: 18px; font-weight: 700; color: #4f46e5; margin: 0 0 6px 0; }
+        .company-name { font-size: 18px; font-weight: 700; color: #0F5A5E; margin: 0 0 6px 0; }
         .company-detail { color: #6b7280; font-size: 10.5px; line-height: 1.5; }
         .doc-title {
             text-align: right;
@@ -25,7 +25,7 @@
             font-size: 24px;
             font-weight: 300;
             letter-spacing: 2px;
-            color: #4f46e5;
+            color: #0F5A5E;
             margin: 0;
             text-transform: uppercase;
         }
@@ -87,7 +87,7 @@
             margin-bottom: 24px;
         }
         table.items thead th {
-            background: #4f46e5;
+            background: #0F5A5E;
             color: #ffffff;
             padding: 10px 8px;
             text-align: left;
@@ -119,19 +119,19 @@
         }
         .totals-row.muted { color: #6b7280; }
         .totals-row.grand {
-            border-top: 2px solid #4f46e5;
+            border-top: 2px solid #0F5A5E;
             margin-top: 6px;
             padding-top: 10px;
             font-size: 14px;
             font-weight: 700;
-            color: #4f46e5;
+            color: #0F5A5E;
         }
         .totals-row.balance { color: #dc2626; font-weight: 600; }
 
         .notes-block {
             background: #f9fafb;
             padding: 12px 14px;
-            border-left: 3px solid #4f46e5;
+            border-left: 3px solid #0F5A5E;
             margin-bottom: 14px;
         }
         .notes-title {

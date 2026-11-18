@@ -36,6 +36,8 @@ class SendPaymentReminder implements ShouldQueue
             return;
         }
 
+        \App\Models\Setting::configureMailForCompany($invoice->company_id);
+
         // Skip if the invoice has been settled or is no longer actionable.
         if (!in_array($invoice->status, ['sent', 'partially_paid', 'overdue'], true)) {
             return;
