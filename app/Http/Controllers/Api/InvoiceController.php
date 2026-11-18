@@ -64,13 +64,19 @@ class InvoiceController extends Controller
                 'milestone_sequence' => $data['milestone_sequence'] ?? null,
                 'milestone_total_termins' => $data['milestone_total_termins'] ?? null,
                 'milestone_percentage' => $data['milestone_percentage'] ?? null,
-                'invoice_number'  => Invoice::generateInvoiceNumber(auth()->user()->company_id),
+                'invoice_number'  => Invoice::generateInvoiceNumber(auth()->user()->company_id, $data['invoice_type'] ?? 'standard'),
+                'invoice_type'    => $data['invoice_type'] ?? 'standard',
                 'invoice_date'    => $data['invoice_date'],
                 'due_date'        => $data['due_date'],
                 'currency'        => $data['currency'],
                 'discount'        => $data['discount'] ?? 0,
                 'discount_type'   => $data['discount_type'],
                 'tax_rate'        => $data['tax_rate'] ?? 0,
+                'withholding_tax_type' => $data['withholding_tax_type'] ?? null,
+                'withholding_tax_rate' => $data['withholding_tax_rate'] ?? 0,
+                'withholding_tax_slip_number' => $data['withholding_tax_slip_number'] ?? null,
+                'withholding_tax_slip_date' => $data['withholding_tax_slip_date'] ?? null,
+                'tax_invoice_number' => $data['tax_invoice_number'] ?? null,
                 'notes'           => $data['notes'] ?? null,
                 'terms'           => $data['terms'] ?? null,
                 'status'          => 'draft',
@@ -180,10 +186,87 @@ class InvoiceController extends Controller
             abort(422, 'Only draft invoices can be marked as sent.');
         }
 
+        // Approval Check: If company requires approval and nominal >= threshold
+        $company = $invoice->company;
+        if ($company->enable_invoice_approval && (float)$invoice->total >= (float)$company->invoice_approval_threshold) {
+            if ($invoice->approval_status !== 'approved') {
+                abort(422, 'Invoice ini memerlukan persetujuan Manajer/Owner (nominal melebihi batas persetujuan) sebelum dapat diterbitkan.');
+            }
+        }
+
         $invoice->update(['status' => 'sent']);
         ActivityLog::record('invoice.sent', "Invoice {$invoice->invoice_number} marked as sent", $invoice);
 
         return new InvoiceResource($invoice->fresh()->load('customer', 'items.product'));
+    }
+
+    public function requestApproval(Invoice $invoice): JsonResponse
+    {
+        $this->authorize('manage', $invoice);
+
+        if ($invoice->status !== 'draft') {
+            abort(422, 'Hanya invoice berstatus draft yang dapat diajukan persetujuan.');
+        }
+
+        $invoice->approval_status = 'pending';
+        $invoice->rejection_reason = null;
+        $invoice->save();
+
+        ActivityLog::record('invoice.approval_requested', "Persetujuan diajukan untuk Invoice {$invoice->invoice_number}", $invoice);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Persetujuan invoice berhasil diajukan kepada Manajer.',
+            'data' => new InvoiceResource($invoice->fresh()),
+        ]);
+    }
+
+    public function approve(Invoice $invoice): JsonResponse
+    {
+        $user = auth()->user();
+        if (!in_array($user->role, ['owner', 'admin'])) {
+            abort(403, 'Hanya Owner atau Admin yang berhak menyetujui invoice.');
+        }
+
+        $invoice->approval_status = 'approved';
+        $invoice->approved_by_user_id = $user->id;
+        $invoice->approved_at = now();
+        $invoice->rejection_reason = null;
+        $invoice->save();
+
+        ActivityLog::record('invoice.approved', "Invoice {$invoice->invoice_number} disetujui oleh {$user->name}", $invoice);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Invoice berhasil disetujui.',
+            'data' => new InvoiceResource($invoice->fresh()->load('approver')),
+        ]);
+    }
+
+    public function reject(Request $request, Invoice $invoice): JsonResponse
+    {
+        $user = auth()->user();
+        if (!in_array($user->role, ['owner', 'admin'])) {
+            abort(403, 'Hanya Owner atau Admin yang berhak menolak invoice.');
+        }
+
+        $validated = $request->validate([
+            'reason' => ['required', 'string', 'max:500'],
+        ]);
+
+        $invoice->approval_status = 'rejected';
+        $invoice->rejection_reason = $validated['reason'];
+        $invoice->approved_by_user_id = $user->id;
+        $invoice->approved_at = now();
+        $invoice->save();
+
+        ActivityLog::record('invoice.rejected', "Invoice {$invoice->invoice_number} ditolak: {$validated['reason']}", $invoice);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Invoice ditolak dan dikembalikan untuk revisi.',
+            'data' => new InvoiceResource($invoice->fresh()),
+        ]);
     }
 
     public function void(Invoice $invoice): InvoiceResource

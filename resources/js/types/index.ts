@@ -178,6 +178,11 @@ export interface Invoice {
     due_date: string;
     status: 'draft' | 'sent' | 'partially_paid' | 'paid' | 'overdue' | 'cancelled' | 'void';
     status_color: string;
+    approval_status?: 'not_required' | 'pending' | 'approved' | 'rejected';
+    approved_by_user_id?: number | null;
+    approved_at?: string | null;
+    rejection_reason?: string | null;
+    approver?: { id: number; name: string; email: string };
     subtotal: number;
     discount: number;
     discount_type: 0 | 1;

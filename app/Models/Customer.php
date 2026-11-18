@@ -21,6 +21,12 @@ class Customer extends Model
         'province',
         'country',
         'tax_number',
+        'npwp_16',
+        'nik',
+        'is_pkp',
+        'credit_limit',
+        'credit_balance',
+        'payment_terms_days',
         'notes',
         'status',
         'is_demo',
@@ -28,6 +34,10 @@ class Customer extends Model
 
     protected $casts = [
         'is_demo' => 'boolean',
+        'is_pkp' => 'boolean',
+        'credit_limit' => 'decimal:2',
+        'credit_balance' => 'decimal:2',
+        'payment_terms_days' => 'integer',
     ];
 
     /**
@@ -65,6 +75,16 @@ class Customer extends Model
     public function payments()
     {
         return $this->hasMany(Payment::class);
+    }
+
+    public function creditNotes()
+    {
+        return $this->hasMany(CreditNote::class);
+    }
+
+    public function debitNotes()
+    {
+        return $this->hasMany(DebitNote::class);
     }
 
     /**

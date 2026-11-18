@@ -30,6 +30,8 @@ class Company extends Model
         'show_stamp_on_pdf',
         'show_qris_on_pdf',
         'show_paid_watermark',
+        'enable_invoice_approval',
+        'invoice_approval_threshold',
     ];
 
     protected $casts = [
@@ -37,6 +39,8 @@ class Company extends Model
         'show_stamp_on_pdf'     => 'boolean',
         'show_qris_on_pdf'      => 'boolean',
         'show_paid_watermark'   => 'boolean',
+        'enable_invoice_approval' => 'boolean',
+        'invoice_approval_threshold' => 'decimal:2',
     ];
 
     public function users()

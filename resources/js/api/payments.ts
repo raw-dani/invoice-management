@@ -22,6 +22,19 @@ export interface PaymentInput {
     notes?: string;
 }
 
+export interface MultiPaymentInput {
+    customer_id: number;
+    amount: number;
+    payment_date: string;
+    payment_method: string;
+    reference?: string;
+    notes?: string;
+    allocations: Array<{
+        invoice_id: number;
+        amount: number;
+    }>;
+}
+
 export const paymentsApi = {
     list: (filters: PaymentFilters = {}) =>
         api.get<Paginated<Payment>>('/payments', { params: filters }).then((r) => r.data),
@@ -31,5 +44,7 @@ export const paymentsApi = {
         api.get<{ data: Payment }>(`/payments/${id}`).then((r) => r.data.data),
     create: (data: PaymentInput) =>
         api.post<{ data: Payment }>(`/invoices/${data.invoice_id}/payments`, data).then((r) => r.data.data),
+    createMulti: (data: MultiPaymentInput) =>
+        api.post('/payments/multi', data).then((r) => r.data),
     remove: (id: number) => api.delete(`/payments/${id}`),
 };

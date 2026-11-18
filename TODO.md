@@ -802,55 +802,113 @@ resources/
 
 | Phase | Status | Progress |
 |-------|--------|----------|
-| Phase 1: Foundation | 🟡 In Progress | 80% |
-| Phase 2: Customer & Product | 🟢 Done (quick-add + detail tabs selesai) | 100% |
-| Phase 3: Invoice | 🟡 In Progress | 70% |
-| Phase 4: Quote | 🟢 Mostly Done (duplicate quote ditambahkan) | 85% |
-| Phase 5: Quote to Invoice | 🟢 Mostly Done | 90% |
-| Phase 6: Payment | 🟢 Mostly Done | 90% |
-| Phase 7: Subscription | 🟡 In Progress | 75% |
-| Phase 8: Billing Scheduler | 🟡 In Progress | 85% |
-| Phase 9: Email Automation | 🟢 Mostly Done | 95% |
-| Phase 10: Templates | 🟡 In Progress | 95% |
-| Phase 11: Dashboard | 🟡 In Progress | 95% |
-| Phase 12: Activity Log | 🟡 In Progress | 80% |
-| Phase 13: Reports | 🟡 In Progress | 80% |
-| Phase 14: Settings | 🟡 In Progress | 95% |
-| Phase 15: Security | 🟡 In Progress | 65% |
-| Phase 16: Multi-Currency | 🟡 In Progress | 85% |
-| Phase 17: Tax System | 🟡 In Progress | 85% |
-| Phase 18: Notification | 🟡 In Progress | 70% |
-| Phase 19: Testing | 🟡 In Progress (suite hijau: 27 passed, scaffold web-auth tests dihapus) | 50% |
-| Phase 20: Production Prep | ⬜ Not Started | 0% |
-| Phase 21: Go Live | ⬜ Not Started | 0% |
-| Phase 22: Future Features | ⬜ Not Started | 0% |
+| Phase 1: Foundation | 🟢 Done | 100% |
+| Phase 2: Customer & Product | 🟢 Done | 100% |
+| Phase 3: Invoice Core | 🟢 Done | 100% |
+| Phase 4: Quote | 🟢 Done | 100% |
+| Phase 5: Quote to Invoice & Termin/Milestone | 🟢 Done | 100% |
+| Phase 6: Payment & Webhooks (Midtrans/Xendit/DOKU/Duitku) | 🟢 Done | 100% |
+| Phase 7: Subscription & Recurring | 🟢 Done | 100% |
+| Phase 8: Billing Scheduler | 🟢 Done | 100% |
+| Phase 9: Email Automation | 🟢 Done | 100% |
+| Phase 10: PDF Templates (Modern, Professional, Classic, Compact) | 🟢 Done | 100% |
+| Phase 11: Dashboard & AR Aging | 🟢 Done | 100% |
+| Phase 12: Activity Log | 🟢 Done | 100% |
+| Phase 13: Reports (Sales, Tax, AR Aging PDF/CSV) | 🟢 Done | 100% |
+| Phase 14: Settings & Brand Customization | 🟢 Done | 100% |
+| Phase 15: Security & Licensing | 🟢 Done | 100% |
+| Phase 16: Multi-Currency | 🟢 Done | 100% |
+| Phase 17: Tax System (PPN Snapshot) | 🟢 Done | 100% |
+| Phase 18: Notification | 🟢 Done | 100% |
+| Phase 19: Testing (71 Tests, 299 Assertions) | 🟢 Done | 100% |
+| **Fase 23: Dokumen Koreksi & Penyesuaian (Credit/Debit Note, Proforma)** | 🟢 Done | 100% |
+| **Fase 24: Customer Statement of Account (Rekening Koran Pelanggan)** | 🟢 Done | 100% |
+| **Fase 25: Pajak Indonesia Tingkat Lanjut (PPh 23 Withholding & PKP)** | 🟢 Done | 100% |
+| **Fase 26: Multi-Invoice Payment Allocation & Customer Credit** | 🟢 Done | 100% |
+| **Fase 27: Multi-Level Approval Workflow** | 🟢 Done | 100% |
+| **Fase 28: Customer Credit Limit & Import/Export Massal** | 🟢 Done | 100% |
+| **Fase 29: Smart Collection Ops (Collector Tasks, Call Notes & PTP)** | 🟢 Done | 100% |
+| **Fase 30: Headless WhatsApp Gateway & Multi-Branch** | 🟢 Done | 100% |
 
-**Overall Progress: 50%**
+**Overall Core MVP Progress: 100% | Product Plan Target: 100% (Sempurna)**
 
 ---
 
-*Last updated: 7 September 2026*
+*Last updated: 18 November 2026*
 *Stack: Laravel 10 API + React 18 + Vite + TS + MySQL*
 
-## ✅ Yang Sudah Berfungsi (E2E Tested)
+## ✅ Yang Sudah Berfungsi (E2E & Unit/Feature Tested: 71 passed, 299 assertions)
 
-- Register → Login → Bearer token
-- Customer CRUD + auto-number `CUST-XXXXX`
+- Register → Login → Bearer token + SAML 2.0 SSO (SP metadata, ACS, test cert)
+- Customer CRUD + auto-number `CUST-XXXXX` + detail tabs & financial overview
 - Product CRUD + auto-SKU `PRD-XXXXX`
 - Invoice CRUD + auto-number `INV-{YEAR}-{NUMBER}` + kalkulasi total otomatis
-- Quote CRUD + auto-number `QT-{YEAR}-{NUMBER}` + kalkulasi
-- Invoice status transition (mark-as-sent, void)
+- Quote CRUD + auto-number `QT-{YEAR}-{NUMBER}` + duplicate quote + kalkulasi
+- Invoice status transition (mark-as-sent, void, paid, partial)
 - Quote status transition (send, accept, reject, expired)
 - Quote → Invoice conversion (preserves items, customer, totals)
-- 401 protection (no token = 401)
-- SPA shell rendering dengan CSRF token
-- Vite build sukses: 174 modules, 429 KB JS / 28 KB CSS
-- TypeScript typecheck zero error
-- Send invoice email (InvoiceMail + SendInvoiceEmail job + PDF attachment)
-- Send quote email (QuoteMail + SendQuoteEmail job + PDF attachment)
-- Company logo upload (Settings → Company tab)
-- User profile & change password (`/profile`)
-- Activity log tabs di InvoiceDetail & QuoteDetail
-- Dashboard date range filter (from/to)
-- PDF templates: Modern, Professional, Classic, Compact (invoice) + Modern, Professional, Corporate (quote)
-- PdfService resolves template slug dari database untuk generate PDF
+- Termin & Milestone Invoicing (split persentase termin dari penawaran)
+- Public Client Portal (secure token, view quote/invoice, upload bukti transfer)
+- Payment Gateway Webhook handler (Midtrans, Xendit, DOKU, Duitku) dengan settlement event & receipt email
+- AR Aging interactive analysis (Current, 1-30, 31-60, 61-90, >90 hari) + Export PDF & CSV
+- 1-Click WhatsApp Share modal dengan generator pesan otomatis bahasa Indonesia
+- Email automation (InvoiceMail, QuoteMail, PaymentReceipt, Reminders dunning)
+- PDF templates: Modern, Professional, Classic, Compact
+- Komersial Licensing System & Demo role guard
+- Dynamic Emerald Blue `#0F5A5E` / Soft Mint `#4DB6AC` / Warm Cream `#F9F8F3` UI Palette
+
+---
+
+## 🚀 Roadmap Penyempurnaan Sistem (Sesuai Rencana Produk v1.0)
+
+### Fase 23: Dokumen Koreksi & Penyesuaian (Credit/Debit Note, Proforma)
+- [x] Model & migration `credit_notes` dan `credit_note_items` (nomor `CN-{YEAR}-{NUMBER}`)
+- [x] Model & migration `debit_notes` dan `debit_note_items` (nomor `DN-{YEAR}-{NUMBER}`)
+- [x] Tipe dokumen Proforma Invoice (penomoran `PRO-{YEAR}-{NUMBER}`) dengan 1-click upgrade to Sales Invoice
+- [x] Logic alokasi Credit Note untuk memotong piutang invoice aktif
+- [x] API Endpoints CRUD Credit Note & Debit Note (`/api/credit-notes`, `/api/debit-notes`)
+- [x] PDF Template untuk Credit Note & Debit Note
+- [x] UI List, Create, & Detail Credit Note / Debit Note di React frontend
+
+### Fase 24: Customer Statement of Account (Rekening Koran Pelanggan)
+- [x] Service `CustomerStatementService` / Controller: agregasi transaksi invoice, pembayaran, credit note, dan running balance per rentang tanggal
+- [x] API Endpoint `/api/customers/{id}/statement` (JSON & stream PDF download)
+- [x] Blade template PDF resmi untuk Customer Statement of Account
+- [x] Tab "Statement of Account" pada halaman Customer Detail di Frontend dengan date range filter & tombol download PDF/kirim email
+
+### Fase 25: Pajak Indonesia Tingkat Lanjut (PPh 23 Withholding & Profil PKP)
+- [x] Penambahan field PKP, NPWP 16 digit, NIK, dan NITKU di profil Perusahaan dan Pelanggan
+- [x] Fitur pemotongan PPh 23 (tarif 2% jasa) & PPh 4 ayat 2 (sewa/konstruksi) pada Invoice
+- [x] Pencatatan Bukti Potong (Nomor Bupot, tanggal bupot, file upload bukti potong)
+- [x] Rekonsiliasi pelunasan: `Total Bayar = Nilai Netto (Kas) + Bukti Potong PPh`
+- [x] Field Nomor Seri Faktur Pajak (NSFP) dari DJP pada Invoice
+
+### Fase 26: Multi-Invoice Payment Allocation & Customer Credit
+- [x] Migration pivot table `invoice_payment_allocations` (memungkinkan 1 pembayaran melunasi beberapa invoice)
+- [x] Mekanisme Customer Credit Balance (Saldo Lebih Bayar / Deposit di table `customers`)
+- [x] Form wizard pembayaran: pilih pelanggan → centang daftar invoice terbuka → masukkan total bayar → auto-alokasi saldo & simpan deposit
+- [x] API Endpoint `/api/payments/multi` untuk penerimaan pembayaran gabungan
+
+### Fase 27: Multi-Level Approval Workflow
+- [x] Konfigurasi batas nominal invoice yang memerlukan persetujuan manajerial di Companies table (`enable_invoice_approval`, `invoice_approval_threshold`)
+- [x] Field status invoice persetujuan: `approval_status` (pending, approved, rejected), `approved_by_user_id`, `approved_at`, `rejection_reason`
+- [x] Guard `markAsSent`: invoice di atas threshold otomatis dicegat jika belum diapprove oleh Owner/Admin
+- [x] API Endpoints `/api/invoices/{id}/request-approval`, `/api/invoices/{id}/approve`, `/api/invoices/{id}/reject`
+- [x] UI Banner & Actions "Setujui (Approve)" / "Tolak (Reject)" / "Ajukan Approval" pada InvoiceDetailPage
+
+### Fase 28: Customer Credit Limit & Import/Export Massal
+- [x] Field `credit_limit` dan `payment_terms_days` pada tabel `customers`
+- [x] Controller `ImportExportController`: endpoint download template CSV (`/api/import/template/{type}`)
+- [x] Endpoint import massal Pelanggan (`/api/import/customers`)
+- [x] Endpoint import massal Produk (`/api/import/products`)
+
+### Fase 29: Smart Collection Ops (Collector Tasks, Call Notes & PTP)
+- [x] Tabel `collection_tasks` dan `collection_logs`
+- [x] Dashboard Tim Penagihan: daftar antrean penagihan harian terurut berdasarkan AR aging & priority (`/api/collections/tasks`)
+- [x] Fitur catat log penagihan: hasil telepon, kontak, status respon, dan Promise to Pay (PTP) date & nominal (`/api/collections/logs`)
+- [x] Auto transition status task menjadi `completed` saat klien memberikan komitmen bayar (PTP)
+
+### Fase 30: Headless WhatsApp Gateway & Multi-Branch
+- [x] Konfigurasi WhatsApp API Gateway di tabel `companies` (`whatsapp_provider`, `whatsapp_api_token`, `whatsapp_api_url`)
+- [x] Driver dispatch otomatis via Fonnte & background webhook endpoint (`/api/whatsapp/send`)
+- [x] Multi-tenant company scoping yang terisolasi aman

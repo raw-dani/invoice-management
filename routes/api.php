@@ -85,6 +85,9 @@ Route::middleware(['auth:sanctum', 'licensed'])->group(function () {
     Route::apiResource('invoices', InvoiceController::class);
     Route::post('invoices/bulk-action', [InvoiceController::class, 'bulkAction']);
     Route::post('invoices/{invoice}/mark-as-sent', [InvoiceController::class, 'markAsSent']);
+    Route::post('invoices/{invoice}/request-approval', [InvoiceController::class, 'requestApproval']);
+    Route::post('invoices/{invoice}/approve',      [InvoiceController::class, 'approve']);
+    Route::post('invoices/{invoice}/reject',       [InvoiceController::class, 'reject']);
     Route::post('invoices/{invoice}/void',        [InvoiceController::class, 'void']);
     Route::post('invoices/{invoice}/duplicate',   [InvoiceController::class, 'duplicate']);
     Route::get('invoices/{invoice}/pdf',          [InvoiceController::class, 'pdf']);
@@ -95,8 +98,35 @@ Route::middleware(['auth:sanctum', 'licensed'])->group(function () {
     // Payments
     Route::get('invoices/{invoice}/payments',     [PaymentController::class, 'index']);
     Route::post('invoices/{invoice}/payments',    [PaymentController::class, 'store']);
+    Route::post('payments/multi',                 [PaymentController::class, 'storeMulti']);
     Route::apiResource('payments', PaymentController::class)->except(['store']);
     Route::get('payments/{payment}/receipt',      [PaymentController::class, 'receipt']);
+
+    // Credit Notes & Debit Notes
+    Route::apiResource('credit-notes', \App\Http\Controllers\Api\CreditNoteController::class);
+    Route::post('credit-notes/{id}/allocate', [\App\Http\Controllers\Api\CreditNoteController::class, 'allocate']);
+    Route::post('credit-notes/{id}/void', [\App\Http\Controllers\Api\CreditNoteController::class, 'void']);
+    Route::get('credit-notes/{id}/pdf', [\App\Http\Controllers\Api\CreditNoteController::class, 'downloadPdf']);
+
+    Route::apiResource('debit-notes', \App\Http\Controllers\Api\DebitNoteController::class);
+    Route::post('debit-notes/{id}/void', [\App\Http\Controllers\Api\DebitNoteController::class, 'void']);
+    Route::get('debit-notes/{id}/pdf', [\App\Http\Controllers\Api\DebitNoteController::class, 'downloadPdf']);
+
+    // Customer Statement of Account
+    Route::get('customers/{customer}/statement', [\App\Http\Controllers\Api\CustomerStatementController::class, 'getStatement']);
+    Route::get('customers/{customer}/statement/pdf', [\App\Http\Controllers\Api\CustomerStatementController::class, 'downloadPdf']);
+
+    // Import & Export
+    Route::get('import/template/{type}', [\App\Http\Controllers\Api\ImportExportController::class, 'downloadTemplate']);
+    Route::post('import/customers', [\App\Http\Controllers\Api\ImportExportController::class, 'importCustomers']);
+    Route::post('import/products', [\App\Http\Controllers\Api\ImportExportController::class, 'importProducts']);
+
+    // Collection Operations & Headless WhatsApp
+    Route::get('collections/tasks', [\App\Http\Controllers\Api\CollectionController::class, 'tasks']);
+    Route::post('collections/tasks', [\App\Http\Controllers\Api\CollectionController::class, 'createTask']);
+    Route::get('collections/logs', [\App\Http\Controllers\Api\CollectionController::class, 'logs']);
+    Route::post('collections/logs', [\App\Http\Controllers\Api\CollectionController::class, 'recordLog']);
+    Route::post('whatsapp/send', [\App\Http\Controllers\Api\CollectionController::class, 'sendWhatsAppMessage']);
 
     // Quotes
     Route::apiResource('quotes', QuoteController::class);

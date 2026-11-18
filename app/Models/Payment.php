@@ -16,6 +16,9 @@ class Payment extends Model
         'payment_number',
         'payment_date',
         'amount',
+        'allocated_amount',
+        'unallocated_amount',
+        'is_multi_allocation',
         'currency',
         'payment_method',
         'reference',
@@ -26,8 +29,16 @@ class Payment extends Model
     protected $casts = [
         'payment_date' => 'date',
         'amount'       => 'decimal:2',
+        'allocated_amount' => 'decimal:2',
+        'unallocated_amount' => 'decimal:2',
+        'is_multi_allocation' => 'boolean',
         'is_demo'      => 'boolean',
     ];
+
+    public function allocations()
+    {
+        return $this->hasMany(InvoicePaymentAllocation::class);
+    }
 
     public function company()
     {

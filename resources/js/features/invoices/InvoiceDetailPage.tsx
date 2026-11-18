@@ -1,4 +1,6 @@
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { invoicesApi } from '../../api/invoices';
 import {
     useInvoice,
     useMarkInvoiceSent,
@@ -8,6 +10,7 @@ import {
     useSendInvoiceEmail,
     useApproveProof,
     useRejectProof,
+    invoiceKeys,
 } from './hooks';
 import { useDeletePayment } from '../payments/hooks';
 import { useEntityActivityLogs } from '../activity/hooks';
@@ -48,6 +51,7 @@ import type { ActivityLog } from '../../types';
 export default function InvoiceDetailPage() {
     const { id } = useParams<{ id: string }>();
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
     const [confirmVoid, setConfirmVoid] = useState(false);
     const [confirmDelete, setConfirmDelete] = useState(false);
     const [paymentOpen, setPaymentOpen] = useState(false);
@@ -70,6 +74,33 @@ export default function InvoiceDetailPage() {
     const approveProof = useApproveProof();
     const rejectProof = useRejectProof();
     const { data: activityData } = useEntityActivityLogs('Invoice', Number(id));
+
+    const requestApprovalMutation = useMutation({
+        mutationFn: () => invoicesApi.requestApproval(Number(id)),
+        onSuccess: () => {
+            toast.success('Persetujuan berhasil diajukan ke Manajer.');
+            queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(Number(id)) });
+        },
+        onError: (err: any) => toast.error(err.response?.data?.message || 'Gagal mengajukan persetujuan.'),
+    });
+
+    const approveMutation = useMutation({
+        mutationFn: () => invoicesApi.approve(Number(id)),
+        onSuccess: () => {
+            toast.success('Invoice berhasil disetujui.');
+            queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(Number(id)) });
+        },
+        onError: (err: any) => toast.error(err.response?.data?.message || 'Gagal menyetujui invoice.'),
+    });
+
+    const rejectMutation = useMutation({
+        mutationFn: (reason: string) => invoicesApi.reject(Number(id), reason),
+        onSuccess: () => {
+            toast.success('Invoice ditolak dan dikembalikan untuk revisi.');
+            queryClient.invalidateQueries({ queryKey: invoiceKeys.detail(Number(id)) });
+        },
+        onError: (err: any) => toast.error(err.response?.data?.message || 'Gagal menolak invoice.'),
+    });
 
     // Handle outside clicks for More dropdown
     useEffect(() => {
@@ -133,6 +164,55 @@ export default function InvoiceDetailPage() {
                 </div>
             </div>
 
+            {/* Approval Workflow Notification Banner */}
+            {invoice.approval_status === 'pending' && (
+                <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <span className="text-xl">⏳</span>
+                        <div>
+                            <h4 className="text-sm font-bold text-amber-900">Menunggu Persetujuan Manajer Keuangan / Owner</h4>
+                            <p className="text-xs text-amber-700">Invoice nominal besar ini memerlukan persetujuan sebelum dapat diterbitkan atau dikirim ke pelanggan.</p>
+                        </div>
+                    </div>
+                    <div className="flex gap-2">
+                        <Button
+                            size="sm"
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs"
+                            loading={approveMutation.isPending}
+                            onClick={() => approveMutation.mutate()}
+                        >
+                            Setujui (Approve)
+                        </Button>
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            className="text-rose-600 border-rose-300 text-xs"
+                            onClick={() => {
+                                const reason = prompt('Masukkan alasan penolakan/revisi:');
+                                if (reason) rejectMutation.mutate(reason);
+                            }}
+                        >
+                            Tolak (Reject)
+                        </Button>
+                    </div>
+                </div>
+            )}
+            {invoice.approval_status === 'rejected' && (
+                <div className="bg-rose-50 border border-rose-200 p-4 rounded-xl flex items-center gap-3">
+                    <span className="text-xl">❌</span>
+                    <div>
+                        <h4 className="text-sm font-bold text-rose-900">Invoice Ditolak / Memerlukan Revisi</h4>
+                        <p className="text-xs text-rose-700">Alasan: {invoice.rejection_reason || 'Perlu penyesuaian nominal/item.'}</p>
+                    </div>
+                </div>
+            )}
+            {invoice.approval_status === 'approved' && (
+                <div className="bg-emerald-50 border border-emerald-200 px-4 py-2 rounded-lg flex items-center gap-2 text-xs text-emerald-800">
+                    <span>✅</span>
+                    <span>Telah disetujui oleh <strong>{invoice.approver?.name || 'Manajer Keuangan'}</strong> pada {formatDate(invoice.approved_at)}</span>
+                </div>
+            )}
+
             {/* Document Header & Organized Action Bar */}
             <div className="bg-white rounded-xl border border-gray-200/80 p-5 shadow-xs flex flex-col lg:flex-row lg:items-center justify-between gap-4">
                 <div className="space-y-1">
@@ -161,18 +241,35 @@ export default function InvoiceDetailPage() {
                         </Button>
                     )}
                     {isDraft && (
-                        <Button
-                            size="sm"
-                            className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-xs"
-                            loading={markSent.isPending}
-                            onClick={async () => {
-                                await markSent.mutateAsync(invoice.id);
-                                toast.success('Invoice berhasil ditandai sebagai terkirim');
-                            }}
-                        >
-                            <PaperAirplaneIcon className="w-4 h-4" />
-                            <span>Tandai Terkirim</span>
-                        </Button>
+                        <>
+                            {invoice.approval_status !== 'approved' && invoice.approval_status !== 'pending' && (
+                                <Button
+                                    size="sm"
+                                    variant="secondary"
+                                    loading={requestApprovalMutation.isPending}
+                                    onClick={() => requestApprovalMutation.mutate()}
+                                    className="text-xs text-amber-700 border-amber-300"
+                                >
+                                    Ajukan Approval
+                                </Button>
+                            )}
+                            <Button
+                                size="sm"
+                                className="inline-flex items-center gap-1.5 bg-indigo-600 hover:bg-indigo-700 text-white font-medium shadow-xs"
+                                loading={markSent.isPending}
+                                onClick={async () => {
+                                    try {
+                                        await markSent.mutateAsync(invoice.id);
+                                        toast.success('Invoice berhasil ditandai sebagai terkirim');
+                                    } catch (err: any) {
+                                        toast.error(err.response?.data?.message || 'Gagal menandai invoice terkirim.');
+                                    }
+                                }}
+                            >
+                                <PaperAirplaneIcon className="w-4 h-4" />
+                                <span>Tandai Terkirim</span>
+                            </Button>
+                        </>
                     )}
 
                     {/* WhatsApp Action */}

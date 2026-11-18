@@ -27,6 +27,7 @@ const ProductFormPage = React.lazy(() => import('../features/products/ProductFor
 const InvoiceListPage = React.lazy(() => import('../features/invoices/InvoiceListPage'));
 const InvoiceDetailPage = React.lazy(() => import('../features/invoices/InvoiceDetailPage'));
 const InvoiceFormPage = React.lazy(() => import('../features/invoices/InvoiceFormPage'));
+const CreditNotesPage = React.lazy(() => import('../features/invoices/CreditNotesPage'));
 const QuoteListPage = React.lazy(() => import('../features/quotes/QuoteListPage'));
 const QuoteDetailPage = React.lazy(() => import('../features/quotes/QuoteDetailPage'));
 const QuoteFormPage = React.lazy(() => import('../features/quotes/QuoteFormPage'));
@@ -71,6 +72,7 @@ export const router = createBrowserRouter([
 
                     { path: '/invoices', element: withSuspense(InvoiceListPage) },
                     { path: '/invoices/new', element: withSuspense(InvoiceFormPage) },
+                    { path: '/invoices/credit-notes', element: withSuspense(CreditNotesPage) },
                     { path: '/invoices/:id', element: withSuspense(InvoiceDetailPage) },
                     { path: '/invoices/:id/edit', element: withSuspense(InvoiceFormPage) },
 

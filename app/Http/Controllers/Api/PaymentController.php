@@ -137,7 +137,108 @@ class PaymentController extends Controller
     public function show(Payment $payment): PaymentResource
     {
         $this->authorize('view', $payment);
-        return new PaymentResource($payment->load(['customer', 'invoice']));
+        return new PaymentResource($payment->load(['customer', 'invoice', 'allocations.invoice']));
+    }
+
+    /**
+     * Record a multi-invoice allocation payment.
+     * Can receive a single bulk payment amount and allocate it across several open invoices.
+     * Any remainder is saved as the customer's credit balance (deposit).
+     */
+    public function storeMulti(Request $request): JsonResponse
+    {
+        $companyId = auth()->user()->company_id;
+
+        $validated = $request->validate([
+            'customer_id' => ['required', 'exists:customers,id'],
+            'amount' => ['required', 'numeric', 'min:0.01'],
+            'payment_date' => ['required', 'date'],
+            'payment_method' => ['required', 'string'],
+            'reference' => ['nullable', 'string', 'max:255'],
+            'notes' => ['nullable', 'string'],
+            'allocations' => ['nullable', 'array'],
+            'allocations.*.invoice_id' => ['required', 'exists:invoices,id'],
+            'allocations.*.amount' => ['required', 'numeric', 'min:0.01'],
+        ]);
+
+        $customer = \App\Models\Customer::where('company_id', $companyId)->findOrFail($validated['customer_id']);
+
+        return DB::transaction(function () use ($validated, $companyId, $customer) {
+            $totalAmount = (float) $validated['amount'];
+            $totalAllocated = 0;
+
+            $payment = Payment::create([
+                'company_id' => $companyId,
+                'customer_id' => $customer->id,
+                'invoice_id' => null, // Multi-allocation payment
+                'payment_number' => Payment::generatePaymentNumber($companyId),
+                'payment_date' => $validated['payment_date'],
+                'amount' => $totalAmount,
+                'allocated_amount' => 0,
+                'unallocated_amount' => $totalAmount,
+                'is_multi_allocation' => true,
+                'currency' => 'IDR',
+                'payment_method' => $validated['payment_method'],
+                'reference' => $validated['reference'] ?? null,
+                'notes' => $validated['notes'] ?? null,
+            ]);
+
+            if (!empty($validated['allocations'])) {
+                foreach ($validated['allocations'] as $alloc) {
+                    $invoice = Invoice::where('company_id', $companyId)
+                        ->where('customer_id', $customer->id)
+                        ->find($alloc['invoice_id']);
+
+                    if (!$invoice || (float) $invoice->balance <= 0) {
+                        continue;
+                    }
+
+                    $allocAmt = min((float) $alloc['amount'], (float) $invoice->balance);
+                    if ($allocAmt <= 0) {
+                        continue;
+                    }
+
+                    \App\Models\InvoicePaymentAllocation::create([
+                        'payment_id' => $payment->id,
+                        'invoice_id' => $invoice->id,
+                        'amount' => $allocAmt,
+                        'allocated_at' => $payment->payment_date,
+                        'notes' => 'Alokasi multi-invoice',
+                    ]);
+
+                    $transitioned = $invoice->applyPayment($allocAmt);
+                    if ($transitioned) {
+                        InvoicePaid::dispatch($invoice->fresh());
+                    }
+
+                    $totalAllocated += $allocAmt;
+                }
+            }
+
+            $unallocated = max(0, $totalAmount - $totalAllocated);
+            $payment->allocated_amount = $totalAllocated;
+            $payment->unallocated_amount = $unallocated;
+            $payment->save();
+
+            // Store any unallocated balance into customer's credit balance deposit
+            if ($unallocated > 0) {
+                $customer->credit_balance = (float) $customer->credit_balance + $unallocated;
+                $customer->save();
+            }
+
+            ActivityLog::record('payment.multi_recorded', "Multi-payment {$payment->payment_number} recorded", $payment, [
+                'customer_id' => $customer->id,
+                'total_amount' => $totalAmount,
+                'allocated' => $totalAllocated,
+                'unallocated_credit' => $unallocated,
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Pembayaran berhasil dialokasikan.',
+                'data' => $payment->load(['allocations.invoice', 'customer']),
+            ], 201);
+        });
     }
 
     public function destroy(Payment $payment): JsonResponse

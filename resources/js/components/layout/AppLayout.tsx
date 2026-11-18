@@ -106,6 +106,7 @@ const NAV_ITEMS = [
     { to: '/customers', label: 'Customers', icon: CustomersIcon },
     { to: '/products', label: 'Products', icon: ProductsIcon },
     { to: '/invoices', label: 'Invoices', icon: InvoicesIcon },
+    { to: '/invoices/credit-notes', label: 'Credit Notes', icon: InvoicesIcon },
     { to: '/quotes', label: 'Quotes', icon: QuotesIcon },
     { to: '/payments', label: 'Payments', icon: PaymentsIcon },
     { to: '/subscriptions', label: 'Subscriptions', icon: SubscriptionsIcon },

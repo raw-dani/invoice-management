@@ -19,15 +19,28 @@ class Invoice extends Model
         'milestone_total_termins',
         'milestone_percentage',
         'invoice_number',
+        'invoice_type',
+        'parent_invoice_id',
         'public_token',
         'invoice_date',
         'due_date',
         'status',
+        'approval_status',
+        'approved_by_user_id',
+        'approved_at',
+        'rejection_reason',
         'subtotal',
         'discount',
         'discount_type',
         'tax_rate',
         'tax_amount',
+        'withholding_tax_type',
+        'withholding_tax_rate',
+        'withholding_tax_amount',
+        'withholding_tax_slip_number',
+        'withholding_tax_slip_date',
+        'withholding_tax_slip_file',
+        'tax_invoice_number',
         'total',
         'paid_amount',
         'balance',
@@ -44,6 +57,7 @@ class Invoice extends Model
     protected $casts = [
         'invoice_date' => 'date',
         'due_date' => 'date',
+        'approved_at' => 'datetime',
         'milestone_sequence' => 'integer',
         'milestone_total_termins' => 'integer',
         'milestone_percentage' => 'decimal:2',
@@ -103,15 +117,40 @@ class Invoice extends Model
         return $this->hasOne(QuoteMilestone::class);
     }
 
-    public static function generateInvoiceNumber(int $companyId): string
+    public function approver(): \Illuminate\Database\Eloquent\Relations\BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
+    }
+
+    public function creditNoteAllocations(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CreditNoteAllocation::class);
+    }
+
+    public function creditNotes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(CreditNote::class);
+    }
+
+    public function debitNotes(): \Illuminate\Database\Eloquent\Relations\HasMany
+    {
+        return $this->hasMany(DebitNote::class);
+    }
+
+    public static function generateInvoiceNumber(int $companyId, string $type = 'standard'): string
     {
         $year = date('Y');
+        $prefix = match($type) {
+            'proforma' => 'PRO-' . $year . '-',
+            'dp' => 'DP-' . $year . '-',
+            default => 'INV-' . $year . '-',
+        };
         $lastInvoice = self::query()
-            ->whereYear('created_at', $year)
+            ->where('invoice_number', 'like', "{$prefix}%")
             ->orderBy('id', 'desc')
             ->first();
         $number = $lastInvoice ? (int) substr($lastInvoice->invoice_number, -5) + 1 : 1;
-        return 'INV-' . $year . '-' . str_pad($number, 5, '0', STR_PAD_LEFT);
+        return $prefix . str_pad((string) $number, 5, '0', STR_PAD_LEFT);
     }
 
     public function getStatusColorAttribute(): string
@@ -153,6 +192,14 @@ class Invoice extends Model
         $afterDiscount = max(0, $subtotal - $discountAmount);
         $this->tax_amount = $afterDiscount * ($this->tax_rate / 100);
         $this->total = $afterDiscount + $this->tax_amount;
+
+        // Calculate Withholding Tax (PPh 23, PPh 4 ayat 2, etc.) on taxable base (after discount)
+        if ((float) $this->withholding_tax_rate > 0) {
+            $this->withholding_tax_amount = $afterDiscount * ($this->withholding_tax_rate / 100);
+        } else {
+            $this->withholding_tax_amount = 0;
+        }
+
         $this->balance = $this->total - $this->paid_amount;
         $this->save();
     }
